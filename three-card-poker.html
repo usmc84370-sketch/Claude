@@ -21,7 +21,7 @@
   header{display:flex;justify-content:space-between;align-items:center;font-size:1.2rem;min-height:38px}
   h1{font-size:1.05rem;margin:0;letter-spacing:.05em;white-space:nowrap}
   .table{flex:1;display:flex;flex-direction:column;justify-content:center}
-  .row{display:flex;justify-content:center;gap:10px;margin:6px 0}
+  .row{perspective:600px;display:flex;justify-content:center;gap:10px;margin:6px 0}
   .card,.slot{width:min(26vw,104px);aspect-ratio:5/7;border-radius:10px}
   .slot{border:2px dashed #fff3}
   .card{background:#fff;color:#111;font-size:clamp(1.6rem,8vw,2.2rem);font-weight:700;line-height:1.15;
@@ -31,7 +31,17 @@
   .label{font-size:.9rem;opacity:.85;min-height:1.3em}
   #msg{min-height:5.6em;margin:8px 0;font-weight:600;white-space:pre-line;display:flex;align-items:center;justify-content:center}
   .bets{display:flex;gap:10px;margin:8px 0}
-  .bets label{flex:1;font-size:.85rem;text-align:left}
+  .bet{flex:1;min-width:0;font-size:.85rem;text-align:left}
+  .dial{position:relative;height:60px;margin-top:2px;border-radius:12px;background:#f4f1e6;color:#222;overflow:hidden;
+    touch-action:none;cursor:ns-resize;outline:0}
+  .dial::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:12px;
+    background:linear-gradient(#0c3b25cc,#0c3b2500 38%,#0c3b2500 62%,#0c3b25cc)}
+  .dial:focus-visible{box-shadow:0 0 0 3px #e9b949}
+  .strip{position:absolute;left:0;right:0;top:0;transition:transform .18s ease-out}
+  .strip div{height:30px;line-height:30px;text-align:center;font-size:1.1rem;font-weight:700;opacity:.4;transition:opacity .15s}
+  .strip .on{opacity:1}
+  .dial.drag .strip{transition:none}
+  .dial.off{opacity:.4;pointer-events:none}
   select,button{font:inherit;border-radius:12px;border:0;min-height:52px;color:#222}
   select{width:100%;padding:0 12px;font-size:1.05rem;background:#f4f1e6}
   .actions{display:flex;gap:10px}
@@ -65,25 +75,39 @@
     .card{font-size:1.4rem}
     #msg{font-size:.9rem;margin:4px 0}
     select,button{min-height:46px}
-    .bets label{font-size:.8rem}
+    .bet{font-size:.8rem}
   }
+  #bankBox{display:inline-block}
+  @keyframes deal{from{opacity:0;transform:translateY(-60px) rotate(-8deg) scale(.7)}}
+  @keyframes flip{from{transform:rotateY(90deg)}}
+  @keyframes pop{from{opacity:0;transform:scale(.9)}}
+  @keyframes glow{50%{box-shadow:0 0 0 3px #e9b949,0 0 20px #e9b949}}
+  @keyframes up{30%{color:#7be08f;transform:scale(1.2)}}
+  @keyframes down{30%{color:#ff8f8f;transform:scale(1.2)}}
+  .card.deal{animation:deal .28s ease-out backwards}
+  .card.flip{animation:flip .3s ease-out backwards}
+  .win .card{animation:glow .8s ease-in-out 2}
+  .pop{animation:pop .25s ease-out}
+  .up{animation:up .7s ease-out}
+  .down{animation:down .7s ease-out}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <main>
-  <header><h1>3 CARD POKER</h1><button id="statsBtn" class="alt small">Stats</button><span>$<b id="bank"></b></span></header>
+  <header><h1>3 CARD POKER</h1><button id="statsBtn" class="alt small">Stats</button><span id="bankBox">$<b id="bank"></b></span></header>
   <div class="table">
   <div class="label" id="dLabel">Dealer</div>
   <div class="row" id="dealer"></div>
-  <div id="msg">Place your bets and deal.</div>
+  <div id="msg">Pull a dial down to raise a bet, then deal.</div>
   <div class="row" id="player"></div>
   <div class="label" id="pLabel">You</div>
   </div>
 
   <div class="bets">
-    <label>Ante <select id="ante"></select></label>
-    <label>Pair Plus <select id="pp"></select></label>
-    <label>6 Card <select id="six"></select></label>
+    <div class="bet"><span>Ante</span><div class="dial" id="ante" role="slider" aria-label="Ante bet"></div></div>
+    <div class="bet"><span>Pair Plus</span><div class="dial" id="pp" role="slider" aria-label="Pair Plus bet"></div></div>
+    <div class="bet"><span>6 Card</span><div class="dial" id="six" role="slider" aria-label="6 Card bet"></div></div>
   </div>
   <div class="actions">
     <button id="deal">Deal</button>
@@ -199,9 +223,60 @@ function deal() {
   return [deck.slice(0, 3), deck.slice(3, 6)];
 }
 
-function show(el, hand, hidden) {
-  el.innerHTML = hand.map(c => hidden ? '<div class="card back"></div>' :
-    `<div class="card${c.s === 1 || c.s === 2 ? ' red' : ''}"><span>${RANKS[c.r - 2]}</span><span>${SUITS[c.s]}</span></div>`).join('');
+// anim is 'deal' or 'flip'; each card starts 90ms after the one before it, offset by delay.
+function show(el, hand, hidden, anim, delay = 0) {
+  el.innerHTML = hand.map((c, i) => {
+    const a = anim ? ` ${anim}" style="animation-delay:${delay + i * 90}ms` : '';
+    return hidden ? `<div class="card back${a}"></div>` :
+      `<div class="card${c.s === 1 || c.s === 2 ? ' red' : ''}${a}"><span>${RANKS[c.r - 2]}</span><span>${SUITS[c.s]}</span></div>`;
+  }).join('');
+}
+// Restart a one-shot CSS animation on an element.
+function flash(el, cls) {
+  el.classList.remove('pop', 'up', 'down');
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+function say(text) { $('msg').textContent = text; flash($('msg'), 'pop'); }
+
+// Bet dial: drag down to raise, up to lower. Higher values sit above, so the strip follows your finger.
+function dial(id, values) {
+  const el = $(id), H = 30, n = values.length;
+  let idx = 0, startY = null, startIdx = 0;
+  const strip = document.createElement('div');
+  strip.className = 'strip';
+  strip.innerHTML = values.slice().reverse().map(v => `<div>${v ? '$' + v : 'None'}</div>`).join('');
+  el.append(strip);
+  const place = (offset = 0) => {
+    strip.style.transform = `translateY(${15 - (n - 1 - idx) * H + offset}px)`;
+    [...strip.children].forEach((c, i) => c.classList.toggle('on', i === n - 1 - idx));
+    el.setAttribute('aria-valuetext', values[idx] ? '$' + values[idx] : 'None');
+  };
+  el.onpointerdown = e => {
+    if (el.classList.contains('off')) return;
+    startY = e.clientY; startIdx = idx;
+    el.setPointerCapture(e.pointerId);
+    el.classList.add('drag');
+  };
+  el.onpointermove = e => {
+    if (startY === null) return;
+    const dy = Math.max(-startIdx * H, Math.min((n - 1 - startIdx) * H, e.clientY - startY));
+    idx = startIdx + Math.round(dy / H);
+    place(dy - (idx - startIdx) * H);
+  };
+  el.onpointerup = el.onpointercancel = () => { startY = null; el.classList.remove('drag'); place(); };
+  el.onkeydown = e => {
+    const step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+    if (!step || el.classList.contains('off')) return;
+    e.preventDefault();
+    idx = Math.max(0, Math.min(n - 1, idx + step)); place();
+  };
+  Object.defineProperty(el, 'value', {
+    get: () => values[idx],
+    set: v => { idx = Math.max(0, values.indexOf(+v)); place(); },
+  });
+  el.tabIndex = 0;
+  place();
 }
 function ui() {
   $('bank').textContent = bank;
@@ -209,21 +284,22 @@ function ui() {
   $('deal').classList.toggle('hide', inHand);
   $('play').classList.toggle('hide', !inHand);
   $('fold').classList.toggle('hide', !inHand);
-  $('ante').disabled = $('pp').disabled = $('six').disabled = inHand;
+  for (const id of ['ante', 'pp', 'six']) $(id).classList.toggle('off', inHand);
   $('reset').classList.toggle('hide', inHand || bank >= 10);
 }
 
 $('deal').onclick = () => {
   ante = +$('ante').value; pp = +$('pp').value; six = +$('six').value;
   const need = ante * 2 + pp + six;
-  if (need > bank) { $('msg').textContent = `You need $${need} to cover every bet plus the play bet.`; return; }
+  if (need > bank) { say(`You need $${need} to cover every bet plus the play bet.`); return; }
   bank -= ante + pp + six;
   [pHand, dHand] = deal();
   inHand = true;
-  show($('player'), pHand); show($('dealer'), dHand, true);
+  $('player').classList.remove('win');
+  show($('player'), pHand, false, 'deal'); show($('dealer'), dHand, true, 'deal', 270);
   $('pLabel').textContent = 'You: ' + NAMES[evaluate(pHand)[0]];
   $('dLabel').textContent = 'Dealer';
-  $('msg').textContent = `Play for $${ante} or fold?`;
+  say(`Play for $${ante} or fold?`);
   ui();
 };
 
@@ -272,17 +348,19 @@ function finish(played) {
   save('tcp-stats', JSON.stringify(st));
 
   inHand = false;
-  show($('dealer'), dHand);
+  show($('dealer'), dHand, false, 'flip');
+  $('player').classList.toggle('win', net > 0);
+  if (net) flash($('bankBox'), net > 0 ? 'up' : 'down');
   $('dLabel').textContent = 'Dealer: ' + NAMES[d[0]];
   const lines = [line];
   if (side.length) lines.push(side.join(' · '));
   lines.push(net > 0 ? `Net +$${net}` : net < 0 ? `Net -$${-net}` : 'Net even');
-  $('msg').textContent = lines.join('\n');
+  say(lines.join('\n'));
   ui();
 }
 $('play').onclick = () => finish(true);
 $('fold').onclick = () => finish(false);
-$('reset').onclick = () => { bank = 1000; $('msg').textContent = 'Fresh $1000. Try not to do that again.'; ui(); };
+$('reset').onclick = () => { bank = 1000; say('Fresh $1000. Try not to do that again.'); ui(); };
 
 // ---------- stats sheet ----------
 const money = n => `<span class="${n > 0 ? 'pos' : n < 0 ? 'neg' : ''}">${n > 0 ? '+' : n < 0 ? '-' : ''}$${Math.abs(n)}</span>`;
@@ -324,8 +402,9 @@ $('statsReset').onclick = () => {
   st = freshStats(); save('tcp-stats', JSON.stringify(st)); renderStats();
 };
 
-for (const v of [5, 10, 25, 50, 100]) $('ante').add(new Option('$' + v, v));
-for (const id of ['pp', 'six']) for (const v of [0, 5, 10, 25, 50, 100]) $(id).add(new Option(v ? '$' + v : 'None', v));
+dial('ante', [5, 10, 25, 50, 100]);
+dial('pp', [0, 5, 10, 25, 50, 100]);
+dial('six', [0, 5, 10, 25, 50, 100]);
 $('dealer').innerHTML = $('player').innerHTML = SLOTS;
 ui();
 </script>
