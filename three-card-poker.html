@@ -18,8 +18,8 @@
   main{width:100%;max-width:480px;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;text-align:center;
     padding:calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 16px)
             calc(env(safe-area-inset-bottom) + 12px) calc(env(safe-area-inset-left) + 16px)}
-  header{display:flex;justify-content:space-between;align-items:baseline;font-size:1.2rem}
-  h1{font-size:1.1rem;margin:0;letter-spacing:.05em}
+  header{display:flex;justify-content:space-between;align-items:center;font-size:1.2rem;min-height:38px}
+  h1{font-size:1.05rem;margin:0;letter-spacing:.05em;white-space:nowrap}
   .table{flex:1;display:flex;flex-direction:column;justify-content:center}
   .row{display:flex;justify-content:center;gap:10px;margin:6px 0}
   .card,.slot{width:min(26vw,104px);aspect-ratio:5/7;border-radius:10px}
@@ -39,6 +39,23 @@
   button:active{filter:brightness(.85)}
   button.alt{background:#ddd}
   button:disabled,select:disabled{opacity:.4}
+  button.small{flex:none;min-height:36px;padding:0 16px;font-size:.95rem}
+  .sheet{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#0c3b25;font-size:.9rem;
+    padding:calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 16px)
+            calc(env(safe-area-inset-bottom) + 16px) calc(env(safe-area-inset-left) + 16px)}
+  .sheet>*{max-width:448px;margin-left:auto;margin-right:auto}
+  .sheet h2{font-size:.8rem;letter-spacing:.08em;opacity:.7;margin:18px 0 6px;text-transform:uppercase}
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .tiles div{background:#0004;border-radius:10px;padding:8px 10px}
+  .tiles b{display:block;font-size:1.25rem}
+  .tiles small{opacity:.75}
+  .sheet table{width:100%;font-size:.82rem;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  .sheet th,.sheet td{padding:6px 4px;text-align:right;border-bottom:1px solid #fff2;font-weight:400}
+  .sheet th{font-size:.75rem;opacity:.7}
+  .sheet th:first-child,.sheet td:first-child{text-align:left}
+  .sheet .actions{margin-top:18px}
+  .pos{color:#7be08f}.neg{color:#ff8f8f}
+  .note{background:#0004;border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.5}
   .hide{display:none}
   details{margin-top:10px;text-align:left;font-size:.85rem;background:#0004;border-radius:10px;padding:10px 12px}
   summary{cursor:pointer}
@@ -48,12 +65,13 @@
     .card{font-size:1.4rem}
     #msg{font-size:.9rem;margin:4px 0}
     select,button{min-height:46px}
+    .bets label{font-size:.8rem}
   }
 </style>
 </head>
 <body>
 <main>
-  <header><h1>3 CARD POKER</h1><span>$<b id="bank"></b></span></header>
+  <header><h1>3 CARD POKER</h1><button id="statsBtn" class="alt small">Stats</button><span>$<b id="bank"></b></span></header>
   <div class="table">
   <div class="label" id="dLabel">Dealer</div>
   <div class="row" id="dealer"></div>
@@ -65,6 +83,7 @@
   <div class="bets">
     <label>Ante <select id="ante"></select></label>
     <label>Pair Plus <select id="pp"></select></label>
+    <label>6 Card <select id="six"></select></label>
   </div>
   <div class="actions">
     <button id="deal">Deal</button>
@@ -88,20 +107,50 @@
       <tr><td>Pair</td><td>1:1</td><td>&mdash;</td></tr>
     </table>
     <p>Ante bonus pays even if the dealer beats you.</p>
+    <p><b>6 Card Bonus</b> (optional): best five-card poker hand out of your three cards plus the dealer's three.
+    It pays or loses on its own, even if you fold or the dealer beats you.</p>
+    <table>
+      <tr><th align="left">6 Card hand</th><th>Pays</th></tr>
+      <tr><td>Royal flush</td><td>1000:1</td></tr>
+      <tr><td>Straight flush</td><td>200:1</td></tr>
+      <tr><td>Four of a kind</td><td>50:1</td></tr>
+      <tr><td>Full house</td><td>25:1</td></tr>
+      <tr><td>Flush</td><td>20:1</td></tr>
+      <tr><td>Straight</td><td>10:1</td></tr>
+      <tr><td>Three of a kind</td><td>5:1</td></tr>
+    </table>
   </details>
 </main>
+<div id="stats" class="sheet hide">
+  <header><h1>STATS</h1><button id="statsClose" class="small">Close</button></header>
+  <div id="statsBody"></div>
+  <div class="actions"><button id="statsReset" class="alt">Reset stats</button></div>
+</div>
 <script>
 const $ = id => document.getElementById(id);
 const SUITS = ['♠','♥','♦','♣'];
 const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 const NAMES = ['High card','Pair','Flush','Straight','Three of a kind','Straight flush'];
+const EXPECTED = [74.39, 16.94, 4.96, 3.26, 0.24, 0.22];   // % chance of each 3-card hand
 const PAIR_PLUS = [0,1,4,6,30,40];   // payout multipliers by hand category
 const ANTE_BONUS = [0,0,0,1,4,5];
-
+const SIX_NAMES = ['Nothing','Three of a kind','Straight','Flush','Full house','Four of a kind','Straight flush','Royal flush'];
+const SIX_PAY = [0,5,10,20,25,50,200,1000];
 const SLOTS = '<div class="slot"></div>'.repeat(3);
-let saved = null;
-try { saved = localStorage.getItem('tcp-bank'); } catch (e) {}
-let bank = saved === null || isNaN(+saved) ? 1000 : +saved, ante = 0, pp = 0, pHand = [], dHand = [], inHand = false;
+
+const freshStats = () => ({
+  hands: 0, folds: 0, dq: 0, w: 0, l: 0, p: 0, best: 0, worst: 0,
+  ap: { n: 0, w: 0, hit: 0, net: 0 }, pp: { n: 0, w: 0, hit: 0, net: 0 }, six: { n: 0, w: 0, hit: 0, net: 0 },
+  cats: NAMES.map(() => ({ n: 0, net: 0 })), sixCats: SIX_NAMES.map(() => 0),
+});
+function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+function save(key, v) { try { localStorage.setItem(key, v); } catch (e) {} }
+
+let st = freshStats();
+try { const o = JSON.parse(load('tcp-stats')); if (o && o.cats && o.cats.length === 6 && o.sixCats) st = o; } catch (e) {}
+const savedBank = load('tcp-bank');
+let bank = savedBank === null || isNaN(+savedBank) ? 1000 : +savedBank;
+let ante = 0, pp = 0, six = 0, pHand = [], dHand = [], inHand = false;
 
 // Returns [category, ...tiebreakers]; compare element by element.
 function evaluate(hand) {
@@ -120,6 +169,26 @@ function compare(a, b) {
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] - b[i];
   return 0;
 }
+// 6 Card Bonus category (index into SIX_NAMES) of one five-card hand.
+function five(hand) {
+  const r = hand.map(c => c.r).sort((a, b) => a - b);
+  const counts = {};
+  for (const x of r) counts[x] = (counts[x] || 0) + 1;
+  const groups = Object.values(counts).sort((a, b) => b - a);
+  const flush = hand.every(c => c.s === hand[0].s);
+  const straight = groups.length === 5 && (r[4] - r[0] === 4 || r.join() === '2,3,4,5,14');
+  if (straight && flush) return r[0] === 10 ? 7 : 6;
+  if (groups[0] === 4) return 5;
+  if (groups[0] === 3 && groups[1] === 2) return 4;
+  if (flush) return 3;
+  if (straight) return 2;
+  if (groups[0] === 3) return 1;
+  return 0;
+}
+// Best five of six: try leaving each card out.
+function bestSix(cards) {
+  return Math.max(...cards.map((_, i) => five(cards.filter((_, j) => j !== i))));
+}
 function deal() {
   const deck = [];
   for (let s = 0; s < 4; s++) for (let r = 2; r <= 14; r++) deck.push({ r, s });
@@ -136,19 +205,19 @@ function show(el, hand, hidden) {
 }
 function ui() {
   $('bank').textContent = bank;
-  if (!inHand) try { localStorage.setItem('tcp-bank', bank); } catch (e) {}
+  if (!inHand) save('tcp-bank', bank);
   $('deal').classList.toggle('hide', inHand);
   $('play').classList.toggle('hide', !inHand);
   $('fold').classList.toggle('hide', !inHand);
-  $('ante').disabled = $('pp').disabled = inHand;
-  $('play').disabled = bank < ante;
-  $('reset').classList.toggle('hide', inHand || bank >= 5);
+  $('ante').disabled = $('pp').disabled = $('six').disabled = inHand;
+  $('reset').classList.toggle('hide', inHand || bank >= 10);
 }
 
 $('deal').onclick = () => {
-  ante = +$('ante').value; pp = +$('pp').value;
-  if (ante * 2 + pp > bank) { $('msg').textContent = `You need $${ante * 2 + pp} to cover ante, play and Pair Plus.`; return; }
-  bank -= ante + pp;
+  ante = +$('ante').value; pp = +$('pp').value; six = +$('six').value;
+  const need = ante * 2 + pp + six;
+  if (need > bank) { $('msg').textContent = `You need $${need} to cover every bet plus the play bet.`; return; }
+  bank -= ante + pp + six;
   [pHand, dHand] = deal();
   inHand = true;
   show($('player'), pHand); show($('dealer'), dHand, true);
@@ -158,30 +227,56 @@ $('deal').onclick = () => {
   ui();
 };
 
+function track(bet, wagered, net) {
+  if (!wagered) return;
+  bet.n++; bet.w += wagered; bet.net += net;
+  if (net > 0) bet.hit++;
+}
 function finish(played) {
   const p = evaluate(pHand), d = evaluate(dHand);
-  const staked = ante + pp + (played ? ante : 0);
-  let back = 0, lines = [];
-  if (!played) {
-    lines.push('You folded.');
-  } else {
-    bank -= ante;
-    const qualifies = d[0] > 0 || d[1] >= 12;
+  const qualifies = d[0] > 0 || d[1] >= 12;
+  const side = [];
+  let line, apNet;
+  if (!played) { apNet = -ante; line = 'You folded.'; }
+  else {
     const c = compare(p, d);
-    if (!qualifies) { back += ante * 2 + ante; lines.push("Dealer doesn't qualify: ante pays, play pushes."); }
-    else if (c > 0) { back += ante * 4; lines.push('You beat the dealer.'); }
-    else if (c === 0) { back += ante * 2; lines.push('Tie: ante and play push.'); }
-    else lines.push('Dealer wins.');
-    if (ANTE_BONUS[p[0]]) { back += ante * ANTE_BONUS[p[0]]; lines.push(`Ante bonus +$${ante * ANTE_BONUS[p[0]]}.`); }
-    if (pp && PAIR_PLUS[p[0]]) { back += pp * (1 + PAIR_PLUS[p[0]]); lines.push(`Pair Plus +$${pp * PAIR_PLUS[p[0]]}.`); }
-    else if (pp) lines.push('Pair Plus loses.');
+    if (!qualifies) { apNet = ante; line = "Dealer doesn't qualify: ante pays, play pushes."; }
+    else if (c > 0) { apNet = ante * 2; line = 'You beat the dealer.'; }
+    else if (c === 0) { apNet = 0; line = 'Tie: ante and play push.'; }
+    else { apNet = -ante * 2; line = 'Dealer wins.'; }
+    if (ANTE_BONUS[p[0]]) { apNet += ante * ANTE_BONUS[p[0]]; side.push(`Ante bonus +$${ante * ANTE_BONUS[p[0]]}`); }
   }
-  bank += back;
-  const net = back - staked;
-  lines.push(net > 0 ? `Net +$${net}` : net < 0 ? `Net -$${-net}` : 'Net even');
+  let ppNet = 0, sixNet = 0;
+  if (pp) {
+    ppNet = played && PAIR_PLUS[p[0]] ? pp * PAIR_PLUS[p[0]] : -pp;
+    side.push(ppNet > 0 ? `Pair Plus +$${ppNet}` : 'Pair Plus loses');
+  }
+  if (six) {
+    const cat = bestSix([...pHand, ...dHand]);
+    sixNet = SIX_PAY[cat] ? six * SIX_PAY[cat] : -six;
+    st.sixCats[cat]++;
+    side.push(sixNet > 0 ? `6 Card ${SIX_NAMES[cat].toLowerCase()} +$${sixNet}` : '6 Card loses');
+  }
+  const net = apNet + ppNet + sixNet;
+  bank += ante + pp + six + net;   // stakes taken at the deal come back along with the net; play bet was never deducted
+
+  st.hands++;
+  if (!played) st.folds++;
+  if (qualifies) st.dq++;
+  st[net > 0 ? 'w' : net < 0 ? 'l' : 'p']++;
+  st.best = Math.max(st.best, net); st.worst = Math.min(st.worst, net);
+  track(st.ap, ante * (played ? 2 : 1), apNet);
+  track(st.pp, pp, ppNet);
+  track(st.six, six, sixNet);
+  st.cats[p[0]].n++; st.cats[p[0]].net += net;
+  save('tcp-stats', JSON.stringify(st));
+
   inHand = false;
   show($('dealer'), dHand);
   $('dLabel').textContent = 'Dealer: ' + NAMES[d[0]];
+  const lines = [line];
+  if (side.length) lines.push(side.join(' · '));
+  lines.push(net > 0 ? `Net +$${net}` : net < 0 ? `Net -$${-net}` : 'Net even');
   $('msg').textContent = lines.join('\n');
   ui();
 }
@@ -189,8 +284,48 @@ $('play').onclick = () => finish(true);
 $('fold').onclick = () => finish(false);
 $('reset').onclick = () => { bank = 1000; $('msg').textContent = 'Fresh $1000. Try not to do that again.'; ui(); };
 
+// ---------- stats sheet ----------
+const money = n => `<span class="${n > 0 ? 'pos' : n < 0 ? 'neg' : ''}">${n > 0 ? '+' : n < 0 ? '-' : ''}$${Math.abs(n)}</span>`;
+const pct = (a, b) => b ? (100 * a / b).toFixed(1) + '%' : '–';
+function renderStats() {
+  const bets = [['Ante+Play', st.ap], ['Pair Plus', st.pp], ['6 Card', st.six]];
+  const net = bets.reduce((t, b) => t + b[1].net, 0), wagered = bets.reduce((t, b) => t + b[1].w, 0);
+  let h = `<div class="tiles">
+    <div><small>Net</small><b>${money(net)}</b><small>on $${wagered} wagered (${wagered ? (100 * net / wagered).toFixed(1) + '%' : '–'})</small></div>
+    <div><small>Hands</small><b>${st.hands}</b><small>${st.w} won · ${st.l} lost · ${st.p} even</small></div>
+    <div><small>Best / worst hand</small><b>${money(st.best)} / ${money(st.worst)}</b></div>
+    <div><small>Folded</small><b>${pct(st.folds, st.hands)}</b><small>dealer qualified ${pct(st.dq, st.hands)}</small></div>
+  </div>`;
+  if (!st.hands) h += '<div class="note">No hands played yet. Go lose some money.</div>';
+  else {
+    const used = bets.filter(b => b[1].n).sort((a, b) => b[1].net - a[1].net);
+    const cats = NAMES.map((name, i) => [name, st.cats[i]]).filter(c => c[1].n).sort((a, b) => b[1].net - a[1].net);
+    const topB = used[0], lowB = used[used.length - 1], topC = cats[0], lowC = cats[cats.length - 1];
+    h += `<div class="note"><b>Best bet:</b> ${topB[0]} (${money(topB[1].net)})`
+      + (lowB !== topB ? `<br><b>Worst bet:</b> ${lowB[0]} (${money(lowB[1].net)})` : '')
+      + `<br><b>Best hand type:</b> ${topC[0]} (${money(topC[1].net)} over ${topC[1].n})`
+      + (lowC !== topC ? `<br><b>Worst hand type:</b> ${lowC[0]} (${money(lowC[1].net)} over ${lowC[1].n})` : '') + '</div>';
+  }
+  h += '<h2>By bet</h2><table><tr><th>Bet</th><th>Wagered</th><th>Won</th><th>Net</th><th>Return</th></tr>'
+    + bets.map(([name, b]) => `<tr><td>${name}</td><td>$${b.w}</td><td>${pct(b.hit, b.n)}</td><td>${money(b.net)}</td>
+      <td>${b.w ? (100 * b.net / b.w).toFixed(1) + '%' : '–'}</td></tr>`).join('') + '</table>';
+  h += '<h2>By your hand</h2><table><tr><th>Hand</th><th>Dealt</th><th>Actual</th><th>Expected</th><th>Net</th></tr>'
+    + NAMES.map((name, i) => [name, st.cats[i], EXPECTED[i]]).reverse().map(([name, c, e]) =>
+      `<tr><td>${name}</td><td>${c.n}</td><td>${pct(c.n, st.hands)}</td><td>${e}%</td><td>${money(c.net)}</td></tr>`).join('') + '</table>';
+  h += '<h2>6 Card results</h2><table><tr><th>Hand</th><th>Pays</th><th>Hit</th><th>Rate</th></tr>'
+    + SIX_NAMES.map((name, i) => [name, i]).reverse().map(([name, i]) =>
+      `<tr><td>${name}</td><td>${SIX_PAY[i] ? SIX_PAY[i] + ':1' : '–'}</td><td>${st.sixCats[i]}</td><td>${pct(st.sixCats[i], st.six.n)}</td></tr>`).join('') + '</table>';
+  $('statsBody').innerHTML = h;
+}
+$('statsBtn').onclick = () => { renderStats(); $('stats').classList.remove('hide'); };
+$('statsClose').onclick = () => $('stats').classList.add('hide');
+$('statsReset').onclick = () => {
+  if (!confirm('Wipe all stats? Bankroll stays.')) return;
+  st = freshStats(); save('tcp-stats', JSON.stringify(st)); renderStats();
+};
+
 for (const v of [5, 10, 25, 50, 100]) $('ante').add(new Option('$' + v, v));
-for (const v of [0, 5, 10, 25, 50, 100]) $('pp').add(new Option(v ? '$' + v : 'None', v));
+for (const id of ['pp', 'six']) for (const v of [0, 5, 10, 25, 50, 100]) $(id).add(new Option(v ? '$' + v : 'None', v));
 $('dealer').innerHTML = $('player').innerHTML = SLOTS;
 ui();
 </script>
