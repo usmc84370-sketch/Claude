@@ -2,51 +2,77 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="3 Card Poker">
+<meta name="theme-color" content="#0c3b25">
 <title>Three Card Poker</title>
 <style>
-  *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;font:16px/1.4 system-ui,sans-serif;color:#f4f1e6;
-    background:radial-gradient(circle at 50% 30%,#1f7a4d,#0c3b25);display:flex;justify-content:center}
-  main{width:100%;max-width:460px;padding:16px;text-align:center}
-  h1{font-size:1.3rem;margin:4px 0 12px;letter-spacing:.05em}
-  .row{display:flex;justify-content:center;gap:8px;min-height:112px;margin:6px 0}
-  .card{width:72px;height:104px;border-radius:8px;background:#fff;color:#111;font-size:1.6rem;font-weight:700;
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{background:#0c3b25;-webkit-text-size-adjust:100%}
+  body{margin:0;min-height:100vh;min-height:100dvh;font:16px/1.4 -apple-system,system-ui,sans-serif;color:#f4f1e6;
+    background:radial-gradient(circle at 50% 30%,#1f7a4d,#0c3b25);display:flex;justify-content:center;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;overscroll-behavior:none}
+  main{width:100%;max-width:480px;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;text-align:center;
+    padding:calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 16px)
+            calc(env(safe-area-inset-bottom) + 12px) calc(env(safe-area-inset-left) + 16px)}
+  header{display:flex;justify-content:space-between;align-items:baseline;font-size:1.2rem}
+  h1{font-size:1.1rem;margin:0;letter-spacing:.05em}
+  .table{flex:1;display:flex;flex-direction:column;justify-content:center}
+  .row{display:flex;justify-content:center;gap:10px;margin:6px 0}
+  .card,.slot{width:min(26vw,104px);aspect-ratio:5/7;border-radius:10px}
+  .slot{border:2px dashed #fff3}
+  .card{background:#fff;color:#111;font-size:clamp(1.6rem,8vw,2.2rem);font-weight:700;line-height:1.15;
     display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 6px #0008}
   .card.red{color:#c0202a}
   .card.back{background:repeating-linear-gradient(45deg,#7a1f2b,#7a1f2b 6px,#5c1620 6px,#5c1620 12px);border:3px solid #fff}
-  .label{font-size:.85rem;opacity:.85;min-height:1.3em}
-  #msg{min-height:4.2em;margin:10px 0;font-weight:600;white-space:pre-line}
-  .bets{display:flex;justify-content:center;gap:14px;margin:10px 0}
-  select,button{font:inherit;padding:10px 14px;border-radius:8px;border:0}
-  button{background:#e9b949;color:#222;font-weight:700;cursor:pointer;min-width:96px}
+  .label{font-size:.9rem;opacity:.85;min-height:1.3em}
+  #msg{min-height:5.6em;margin:8px 0;font-weight:600;white-space:pre-line;display:flex;align-items:center;justify-content:center}
+  .bets{display:flex;gap:10px;margin:8px 0}
+  .bets label{flex:1;font-size:.85rem;text-align:left}
+  select,button{font:inherit;border-radius:12px;border:0;min-height:52px;color:#222}
+  select{width:100%;padding:0 12px;font-size:1.05rem;background:#f4f1e6}
+  .actions{display:flex;gap:10px}
+  button{flex:1;background:#e9b949;font-weight:700;font-size:1.15rem;cursor:pointer}
+  button:active{filter:brightness(.85)}
   button.alt{background:#ddd}
-  button:disabled,select:disabled{opacity:.4;cursor:default}
+  button:disabled,select:disabled{opacity:.4}
   .hide{display:none}
-  details{margin-top:18px;text-align:left;font-size:.85rem;background:#0004;border-radius:8px;padding:8px 12px}
+  details{margin-top:10px;text-align:left;font-size:.85rem;background:#0004;border-radius:10px;padding:10px 12px}
+  summary{cursor:pointer}
   td{padding:1px 10px 1px 0}
+  @media (max-height:620px){
+    .card,.slot{width:12.5dvh}
+    .card{font-size:1.4rem}
+    #msg{font-size:.9rem;margin:4px 0}
+    select,button{min-height:46px}
+  }
 </style>
 </head>
 <body>
 <main>
-  <h1>THREE CARD POKER</h1>
+  <header><h1>3 CARD POKER</h1><span>$<b id="bank"></b></span></header>
+  <div class="table">
   <div class="label" id="dLabel">Dealer</div>
   <div class="row" id="dealer"></div>
   <div id="msg">Place your bets and deal.</div>
   <div class="row" id="player"></div>
   <div class="label" id="pLabel">You</div>
+  </div>
 
   <div class="bets">
     <label>Ante <select id="ante"></select></label>
     <label>Pair Plus <select id="pp"></select></label>
   </div>
-  <div>
+  <div class="actions">
     <button id="deal">Deal</button>
     <button id="play" class="hide">Play</button>
     <button id="fold" class="hide alt">Fold</button>
+    <button id="reset" class="alt hide">Rebuy</button>
   </div>
-  <p>Bankroll: $<b id="bank"></b> <button id="reset" class="alt hide">Rebuy</button></p>
-
+  
   <details>
     <summary>Rules &amp; payouts</summary>
     <p>Ante up (Pair Plus is optional), get three cards, then <b>Play</b> (bet equal to your ante) or <b>Fold</b>
@@ -72,7 +98,10 @@ const NAMES = ['High card','Pair','Flush','Straight','Three of a kind','Straight
 const PAIR_PLUS = [0,1,4,6,30,40];   // payout multipliers by hand category
 const ANTE_BONUS = [0,0,0,1,4,5];
 
-let bank = 1000, ante = 0, pp = 0, pHand = [], dHand = [], inHand = false;
+const SLOTS = '<div class="slot"></div>'.repeat(3);
+let saved = null;
+try { saved = localStorage.getItem('tcp-bank'); } catch (e) {}
+let bank = saved === null || isNaN(+saved) ? 1000 : +saved, ante = 0, pp = 0, pHand = [], dHand = [], inHand = false;
 
 // Returns [category, ...tiebreakers]; compare element by element.
 function evaluate(hand) {
@@ -107,6 +136,7 @@ function show(el, hand, hidden) {
 }
 function ui() {
   $('bank').textContent = bank;
+  if (!inHand) try { localStorage.setItem('tcp-bank', bank); } catch (e) {}
   $('deal').classList.toggle('hide', inHand);
   $('play').classList.toggle('hide', !inHand);
   $('fold').classList.toggle('hide', !inHand);
@@ -161,6 +191,7 @@ $('reset').onclick = () => { bank = 1000; $('msg').textContent = 'Fresh $1000. T
 
 for (const v of [5, 10, 25, 50, 100]) $('ante').add(new Option('$' + v, v));
 for (const v of [0, 5, 10, 25, 50, 100]) $('pp').add(new Option(v ? '$' + v : 'None', v));
+$('dealer').innerHTML = $('player').innerHTML = SLOTS;
 ui();
 </script>
 </body>
