@@ -78,6 +78,33 @@
     .bet{font-size:.8rem}
   }
   #bankBox{display:inline-block}
+  @media (max-width:380px){main>header h1{display:none}}
+  .tabs{margin-top:10px}
+  .hand{background:#0004;border-radius:10px;padding:10px 12px;margin-top:8px}
+  .hand h3{margin:0 0 8px;font-size:1rem;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .hand h3 small{font-weight:400;opacity:.75;white-space:nowrap}
+  .hand p{margin:8px 0 0;line-height:1.4}
+  .hand .pays{opacity:.75;font-size:.8rem}
+  .mini{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:32px;height:44px;margin-right:4px;
+    border-radius:5px;background:#fff;color:#111;font-weight:700;font-size:.8rem;line-height:1.1}
+  .mini.red{color:#c0202a}
+  .qprompt{text-align:center;font-size:1.05rem;margin:16px 0 8px}
+  .qrow{display:flex;justify-content:center;gap:6px;margin:8px 0}
+  .qrow .card{width:min(22vw,84px)}
+  .qrow.six .card{width:min(14vw,62px);font-size:1.15rem;border-radius:7px}
+  .card.dim{opacity:.3}
+  .sheet .label{text-align:center}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .opts button{min-height:46px;font-size:.95rem;background:#f4f1e6}
+  .opts .right{background:#7be08f}
+  .opts .wrong{background:#ff8f8f}
+  #qfb{min-height:4.2em;margin-top:12px;line-height:1.4;text-align:center}
+  .score{text-align:center;opacity:.85;margin-top:12px}
+  @media (max-height:620px){
+    .qrow .card{width:17vw;font-size:1.3rem}
+    .qrow.six .card{width:14vw;font-size:1.15rem}
+    #qfb{min-height:2.8em}
+  }
   @keyframes deal{from{opacity:0;transform:translateY(-60px) rotate(-8deg) scale(.7)}}
   @keyframes flip{from{transform:rotateY(90deg)}}
   @keyframes pop{from{opacity:0;transform:scale(.9)}}
@@ -95,7 +122,7 @@
 </head>
 <body>
 <main>
-  <header><h1>3 CARD POKER</h1><button id="statsBtn" class="alt small">Stats</button><span id="bankBox">$<b id="bank"></b></span></header>
+  <header><h1>3 CARD POKER</h1><button id="learnBtn" class="small">Learn</button><button id="statsBtn" class="alt small">Stats</button><span id="bankBox">$<b id="bank"></b></span></header>
   <div class="table">
   <div class="label" id="dLabel">Dealer</div>
   <div class="row" id="dealer"></div>
@@ -145,6 +172,12 @@
     </table>
   </details>
 </main>
+<div id="learn" class="sheet hide">
+  <header><h1>LEARN THE HANDS</h1><button id="learnClose" class="small">Close</button></header>
+  <div class="actions tabs"><button id="tabGuide">Guide</button><button id="tabQuiz" class="alt">Quiz</button></div>
+  <div id="guide"></div>
+  <div id="quiz" class="hide"></div>
+</div>
 <div id="stats" class="sheet hide">
   <header><h1>STATS</h1><button id="statsClose" class="small">Close</button></header>
   <div id="statsBody"></div>
@@ -401,6 +434,148 @@ $('statsReset').onclick = () => {
   if (!confirm('Wipe all stats? Bankroll stays.')) return;
   st = freshStats(); save('tcp-stats', JSON.stringify(st)); renderStats();
 };
+
+// ---------- learn sheet: guide + quiz ----------
+const parse = str => str.split(' ').map(t => ({ r: RANKS.indexOf(t.slice(0, -1)) + 2, s: SUITS.indexOf(t.slice(-1)) }));
+const face = (c, cls) => `<div class="${cls}${c.s === 1 || c.s === 2 ? ' red' : ''}"><span>${RANKS[c.r - 2]}</span><span>${SUITS[c.s]}</span></div>`;
+const rnd = n => Math.floor(Math.random() * n);
+// [category, example, odds, how to spot it], best hand first
+const HANDS3 = [
+  [5, '5♥ 6♥ 7♥', '1 in 460', 'Three in a row AND all one suit. A straight and a flush at the same time.'],
+  [4, '9♠ 9♥ 9♣', '1 in 425', 'Three cards of the same rank.'],
+  [3, '4♣ 5♦ 6♠', '1 in 31', 'Three in a row, suits don\'t matter. Ace works high (Q-K-A) or low (A-2-3), but K-A-2 doesn\'t wrap.'],
+  [2, '2♦ 9♦ K♦', '1 in 20', 'All three the same suit, not in a row. Loses to a straight in this game.'],
+  [1, 'J♠ J♦ 4♣', '1 in 6', 'Two cards of the same rank. Higher pair wins; the third card breaks ties.'],
+  [0, 'Q♥ 7♠ 3♦', '3 in 4', 'Nothing matches. Highest card plays. The dealer needs at least Queen-high to qualify.'],
+];
+const HANDS6 = [
+  [7, '10♠ J♠ Q♠ K♠ A♠', '1 in 108,290', '10-J-Q-K-A all one suit. The top straight flush.'],
+  [6, '5♥ 6♥ 7♥ 8♥ 9♥', '1 in 12,294', 'Five in a row, all one suit.'],
+  [5, '8♠ 8♥ 8♦ 8♣ K♠', '1 in 1,388', 'All four cards of one rank.'],
+  [4, 'Q♠ Q♥ Q♦ 5♣ 5♠', '1 in 123', 'Three of one rank plus a pair of another.'],
+  [3, '3♣ 7♣ 9♣ J♣ A♣', '1 in 99', 'Five cards of one suit, not in a row.'],
+  [2, '6♠ 7♦ 8♣ 9♥ 10♠', '1 in 56', 'Five in a row, mixed suits. Ace can be high (10-A) or low (A-5).'],
+  [1, '4♠ 4♥ 4♦ K♣ 9♠', '1 in 28', 'Three of one rank and nothing else.'],
+];
+const HOOK3 = {}, HOOK6 = { 0: 'One pair and two pair pay nothing. You need three of a kind or better.' };
+for (const h of HANDS3) HOOK3[h[0]] = h[3];
+for (const h of HANDS6) HOOK6[h[0]] = h[3];
+
+function renderGuide() {
+  const block = (name, h, pays) => `<div class="hand"><h3><span>${name}</span><small>${h[2]}</small></h3>
+    ${parse(h[1]).map(c => face(c, 'mini')).join('')}<p>${h[3]}</p><p class="pays">${pays}</p></div>`;
+  $('guide').innerHTML = `<h2>Three-card hands, best to worst</h2>
+    <div class="note"><b>The rule to remember: the rarer hand wins.</b> With only three cards it's harder to hit three in a row
+    than three of one suit, so a straight beats a flush here, the reverse of regular poker. Three of a kind beats both.</div>`
+    + HANDS3.map((h, i) => block(`${i + 1}. ${NAMES[h[0]]}`, h, PAIR_PLUS[h[0]]
+      ? `Pair Plus ${PAIR_PLUS[h[0]]}:1` + (ANTE_BONUS[h[0]] ? ` · Ante bonus ${ANTE_BONUS[h[0]]}:1` : '') : 'No bonus payout')).join('')
+    + `<h2>6 Card Bonus hands, best to worst</h2>
+    <div class="note">Best five cards out of the six on the table (your three plus the dealer's). This side uses the regular
+    five-card poker order, so <b>here a flush beats a straight</b>. One pair and two pair pay nothing.</div>`
+    + HANDS6.map((h, i) => block(`${i + 1}. ${SIX_NAMES[h[0]]}`, h, `Pays ${SIX_PAY[h[0]]}:1`)).join('');
+}
+
+// Quiz. Weights make hands you miss come up more often.
+let bestStreak = +load('tcp-streak') || 0;
+const quiz = { streak: 0, right: 0, total: 0, w3: NAMES.map(() => 1), w6: SIX_NAMES.map(() => 1), q: null };
+function pick(w) {
+  let t = Math.random() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < w.length; i++) if ((t -= w[i]) < 0) return i;
+  return w.length - 1;
+}
+function gen3(cat) {
+  for (;;) for (const h of deal()) if (evaluate(h)[0] === cat) return h;
+}
+function gen6(cat) {
+  for (;;) {
+    let cards;
+    if (cat >= 6) {   // too rare to wait for: build the straight flush, add one stray card
+      const s = rnd(4), low = cat === 7 ? 10 : 2 + rnd(8);
+      cards = [0, 1, 2, 3, 4].map(i => ({ r: low + i, s }));
+      const x = { r: 2 + rnd(13), s: rnd(4) };
+      if (cards.some(c => c.r === x.r && c.s === x.s)) continue;
+      cards.splice(rnd(6), 0, x);
+    } else cards = deal().flat();
+    if (bestSix(cards) === cat) return cards;
+  }
+}
+function ask() {
+  const type = ['name3', 'name3', 'win', 'name6'][rnd(4)];
+  let q;
+  if (type === 'name3') {
+    const cat = pick(quiz.w3);
+    q = { prompt: 'What three-card hand is this?', cards: gen3(cat), answer: cat, w: quiz.w3, cats: [cat],
+      opts: NAMES.map((n, i) => [n, i]).reverse() };
+  } else if (type === 'name6') {
+    const cat = pick(quiz.w6);
+    q = { prompt: 'Best five-card hand in these six?', cards: gen6(cat), answer: cat, w: quiz.w6, cats: [cat],
+      opts: SIX_NAMES.map((n, i) => [i ? n : 'No bonus', i]).reverse() };
+  } else {
+    let a, b;
+    do { a = gen3(pick(quiz.w3)); b = gen3(pick(quiz.w3)); }
+    while (compare(evaluate(a), evaluate(b)) === 0 || a.some(c => b.some(d => c.r === d.r && c.s === d.s)));
+    const ea = evaluate(a), eb = evaluate(b);
+    q = { prompt: 'Which hand wins?', a, b, answer: compare(ea, eb) > 0 ? 0 : 1, w: quiz.w3, cats: [ea[0], eb[0]],
+      opts: [['Top hand', 0], ['Bottom hand', 1]] };
+  }
+  q.type = type;
+  quiz.q = q;
+  const row = (cards, cls = '') => `<div class="qrow ${cls}">${cards.map(c => face(c, 'card')).join('')}</div>`;
+  $('quiz').innerHTML = `<p class="qprompt"><b>${q.prompt}</b></p>`
+    + (type === 'win' ? row(q.a) + '<div class="label">vs</div>' + row(q.b) : row(q.cards, type === 'name6' ? 'six' : ''))
+    + `<div class="opts">${q.opts.map(([n, v]) => `<button data-v="${v}">${n}</button>`).join('')}</div>
+    <div id="qfb"></div><div class="actions"><button id="qnext" class="hide">Next</button></div><div class="score" id="qscore"></div>`;
+  score();
+}
+function score() {
+  $('qscore').textContent = `Streak ${quiz.streak} · Best ${bestStreak} · ${quiz.right}/${quiz.total} right`;
+}
+function explain(q) {
+  if (q.type === 'name3') return `<b>${NAMES[q.answer]}.</b> ${HOOK3[q.answer]}`;
+  if (q.type === 'name6') return `<b>${q.answer ? SIX_NAMES[q.answer] : 'No bonus'}.</b> ${HOOK6[q.answer]}`;
+  const [x, y] = q.cats, hi = Math.max(x, y), lo = Math.min(x, y);
+  if (hi === lo) return `<b>Both are ${NAMES[hi].toLowerCase()}.</b> `
+    + (hi === 1 ? 'The higher pair wins; if the pairs match, the third card decides.' : 'Compare the highest card, then the next one down.');
+  return `<b>${NAMES[hi]} beats ${NAMES[lo].toLowerCase()}.</b>`
+    + (hi === 3 && lo === 2 ? ' With three cards the straight is the rarer hand.' : '');
+}
+$('quiz').onclick = e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  if (btn.id === 'qnext') return ask();
+  const q = quiz.q;
+  if (q.done || btn.dataset.v === undefined) return;
+  q.done = true;
+  const ok = +btn.dataset.v === q.answer;
+  quiz.total++;
+  if (ok) { quiz.right++; if (++quiz.streak > bestStreak) save('tcp-streak', bestStreak = quiz.streak); }
+  else quiz.streak = 0;
+  for (const c of q.cats) q.w[c] = ok ? Math.max(1, q.w[c] - 0.5) : q.w[c] + 2;
+  for (const b of $('quiz').querySelectorAll('.opts button')) {
+    if (+b.dataset.v === q.answer) b.classList.add('right');
+    else if (b === btn) b.classList.add('wrong');
+  }
+  if (q.type === 'name6' && q.answer) {   // fade the card that isn't part of the hand
+    const out = q.cards.findIndex((_, i) => five(q.cards.filter((_, j) => j !== i)) === q.answer);
+    $('quiz').querySelectorAll('.card')[out].classList.add('dim');
+  }
+  $('qfb').innerHTML = (ok ? '' : 'Not quite. ') + explain(q);
+  flash($('qfb'), 'pop');
+  $('qnext').classList.remove('hide');
+  score();
+};
+function tab(showQuiz) {
+  $('guide').classList.toggle('hide', showQuiz);
+  $('quiz').classList.toggle('hide', !showQuiz);
+  $('tabGuide').classList.toggle('alt', showQuiz);
+  $('tabQuiz').classList.toggle('alt', !showQuiz);
+  if (showQuiz && !quiz.q) ask();
+  $('learn').scrollTop = 0;
+}
+$('tabGuide').onclick = () => tab(false);
+$('tabQuiz').onclick = () => tab(true);
+$('learnBtn').onclick = () => { if (!$('guide').innerHTML) renderGuide(); $('learn').classList.remove('hide'); };
+$('learnClose').onclick = () => $('learn').classList.add('hide');
 
 dial('ante', [5, 10, 25, 50, 100]);
 dial('pp', [0, 5, 10, 25, 50, 100]);
