@@ -65,6 +65,11 @@
   .sheet th:first-child,.sheet td:first-child{text-align:left}
   .sheet .actions{margin-top:18px}
   .pos{color:#7be08f}.neg{color:#ff8f8f}
+  .spark{display:block;width:100%;height:48px;margin:8px 0 2px}
+  .note small{opacity:.7}
+  .meter{position:relative;height:8px;border-radius:4px;margin:14px 0 4px;background:linear-gradient(90deg,#6aa8ff,#ffffff40,#ff9a5c)}
+  .meter i{position:absolute;top:-5px;width:4px;height:18px;border-radius:2px;background:#fff;transform:translateX(-50%)}
+  .meter-l{display:flex;justify-content:space-between;font-size:.75rem;opacity:.7;margin-bottom:8px}
   .note{background:#0004;border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.5}
   .hide{display:none}
   details{margin-top:10px;text-align:left;font-size:.85rem;background:#0004;border-radius:10px;padding:10px 12px}
@@ -199,12 +204,15 @@ const freshStats = () => ({
   hands: 0, folds: 0, dq: 0, w: 0, l: 0, p: 0, best: 0, worst: 0,
   ap: { n: 0, w: 0, hit: 0, net: 0 }, pp: { n: 0, w: 0, hit: 0, net: 0 }, six: { n: 0, w: 0, hit: 0, net: 0 },
   cats: NAMES.map(() => ({ n: 0, net: 0 })), sixCats: SIX_NAMES.map(() => 0),
+  recent: [],                       // last 50 hands as [ante+play net, pair plus net, 6 card net]
+  sq: 0, sqN: 0,                    // sum of squared hand nets, for the luck reading
+  dec: 0, loose: 0, tight: 0,       // decisions checked against Q-6-4, weak hands played, good hands folded
 });
 function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 function save(key, v) { try { localStorage.setItem(key, v); } catch (e) {} }
 
 let st = freshStats();
-try { const o = JSON.parse(load('tcp-stats')); if (o && o.cats && o.cats.length === 6 && o.sixCats) st = o; } catch (e) {}
+try { const o = JSON.parse(load('tcp-stats')); if (o && o.cats && o.cats.length === 6 && o.sixCats) st = Object.assign(freshStats(), o); } catch (e) {}
 const savedBank = load('tcp-bank');
 let bank = savedBank === null || isNaN(+savedBank) ? 1000 : +savedBank;
 let ante = 0, pp = 0, six = 0, pHand = [], dHand = [], inHand = false;
@@ -378,6 +386,13 @@ function finish(played) {
   track(st.pp, pp, ppNet);
   track(st.six, six, sixNet);
   st.cats[p[0]].n++; st.cats[p[0]].net += net;
+  st.recent.push([apNet, ppNet, sixNet]);
+  if (st.recent.length > 50) st.recent.shift();
+  st.sq += net * net; st.sqN++;
+  const shouldPlay = p[0] > 0 || compare(p, [0, 12, 6, 4]) >= 0;   // basic strategy: Q-6-4 or better
+  st.dec++;
+  if (played && !shouldPlay) st.loose++;
+  if (!played && shouldPlay) st.tight++;
   save('tcp-stats', JSON.stringify(st));
 
   inHand = false;
@@ -398,6 +413,60 @@ $('reset').onclick = () => { bank = 1000; say('Fresh $1000. Try not to do that a
 // ---------- stats sheet ----------
 const money = n => `<span class="${n > 0 ? 'pos' : n < 0 ? 'neg' : ''}">${n > 0 ? '+' : n < 0 ? '-' : ''}$${Math.abs(n)}</span>`;
 const pct = (a, b) => b ? (100 * a / b).toFixed(1) + '%' : '–';
+// Long-run cost of each bet per dollar wagered. Pair Plus and 6 Card are exact for these paytables;
+// ante+play assumes you follow Q-6-4.
+const EDGE = [0.0201, 0.0232, 0.1022];
+function working() {
+  const head = "<h2>What's working</h2>";
+  const all = st.recent, w = all.slice(-20), n = w.length;
+  if (n < 5) return head + '<div class="note">Play at least 5 hands and this fills in.</div>';
+  const names = ['Ante+Play', 'Pair Plus', '6 Card'];
+  const total = h => h[0] + h[1] + h[2];
+  const sums = [0, 1, 2].map(i => w.reduce((t, h) => t + h[i], 0));
+  const live = [0, 1, 2].filter(i => i === 0 || w.some(h => h[i]));
+  const list = sign => live.filter(i => sign * sums[i] > 0).sort((a, b) => sign * (sums[b] - sums[a]))
+    .map(i => `${names[i]} ${money(sums[i])}`).join(', ');
+  const up = list(1), down = list(-1), recentNet = sums[0] + sums[1] + sums[2];
+  let run = 1;
+  const last = Math.sign(total(w[n - 1]));
+  while (run < all.length && Math.sign(total(all[all.length - 1 - run])) === last) run++;
+  const allNet = st.ap.net + st.pp.net + st.six.net;
+
+  // bankroll swing over the stored hands
+  let y = 0;
+  const pts = [0, ...all.map(h => y += total(h))], lo = Math.min(...pts), hi = Math.max(...pts), span = hi - lo || 1;
+  const Y = v => (28 - 26 * (v - lo) / span).toFixed(1);
+  const line = pts.map((v, i) => `${(100 * i / (pts.length - 1)).toFixed(1)},${Y(v)}`).join(' ');
+  const spark = `<svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none">
+    <line x1="0" x2="100" y1="${Y(0)}" y2="${Y(0)}" stroke="#fff4" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"/>
+    <polyline points="${line}" fill="none" stroke="${y >= 0 ? '#7be08f' : '#ff8f8f'}" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+
+  let h = head + `<div class="note"><b>Last ${n} hands: ${money(recentNet)}</b>
+    (${money(Math.round(recentNet / n))} a hand, vs ${money(Math.round(allNet / st.hands))} all-time)
+    ${spark}<small>Bankroll swing, last ${all.length} hands</small>
+    <br><b>Working:</b> ${up || "nothing's paying right now"}
+    <br><b>Not working:</b> ${down || 'nothing is losing right now'}
+    <br><b>Streak:</b> ${last > 0 ? 'won' : last < 0 ? 'lost' : 'broke even on'} the last ${run === 1 ? 'hand' : run + ' hands'}</div>`;
+
+  // luck: actual result against what the house edge predicts for the money wagered
+  const expected = -Math.round(st.ap.w * EDGE[0] + st.pp.w * EDGE[1] + st.six.w * EDGE[2]);
+  const diff = allNet - expected;
+  const variance = st.sqN ? Math.max(0, st.sq / st.sqN - (allNet / st.hands) ** 2) : 0;
+  const z = variance ? diff / Math.sqrt(st.hands * variance) : 0;
+  const verdict = z > 1.5 ? 'Running hot' : z > 0.5 ? 'A little lucky' : z < -1.5 ? 'Running cold' : z < -0.5 ? 'A little unlucky' : 'About what the math says';
+  const pairs = st.hands - st.cats[0].n;
+  h += `<h2>How the luck's running</h2><div class="note"><b>${verdict}.</b>
+    The house edge says you should be around ${money(expected)} on what you've wagered. You're at ${money(allNet)},
+    which is <span class="${diff >= 0 ? 'pos' : 'neg'}">$${Math.abs(diff)} ${diff >= 0 ? 'better' : 'worse'}</span> than expected.
+    <div class="meter"><i style="left:${Math.max(2, Math.min(98, 50 + z * 20)).toFixed(0)}%"></i></div>
+    <div class="meter-l"><span>cold</span><span>expected</span><span>hot</span></div>
+    <b>Your cards:</b> pair or better ${pct(pairs, st.hands)} of the time (normal is 25.6%)
+    <br><b>Dealer:</b> qualified ${pct(st.dq, st.hands)} of the time (normal is 69.6%)`
+    + (st.dec ? `<br><b>Your calls:</b> ${st.dec - st.loose - st.tight} of ${st.dec} matched basic strategy (play Q-6-4 or better, fold the rest).`
+      + (st.loose || st.tight ? ` You played ${st.loose} weak hand${st.loose === 1 ? '' : 's'} and folded ${st.tight} good one${st.tight === 1 ? '' : 's'}; that part is on you, not luck.` : '') : '')
+    + `<br><small>All of this describes hands already played. The deck is reshuffled every hand, so a hot or cold run says nothing about the next one.</small></div>`;
+  return h;
+}
 function renderStats() {
   const bets = [['Ante+Play', st.ap], ['Pair Plus', st.pp], ['6 Card', st.six]];
   const net = bets.reduce((t, b) => t + b[1].net, 0), wagered = bets.reduce((t, b) => t + b[1].w, 0);
@@ -417,6 +486,7 @@ function renderStats() {
       + `<br><b>Best hand type:</b> ${topC[0]} (${money(topC[1].net)} over ${topC[1].n})`
       + (lowC !== topC ? `<br><b>Worst hand type:</b> ${lowC[0]} (${money(lowC[1].net)} over ${lowC[1].n})` : '') + '</div>';
   }
+  if (st.hands) h += working();
   h += '<h2>By bet</h2><table><tr><th>Bet</th><th>Wagered</th><th>Won</th><th>Net</th><th>Return</th></tr>'
     + bets.map(([name, b]) => `<tr><td>${name}</td><td>$${b.w}</td><td>${pct(b.hit, b.n)}</td><td>${money(b.net)}</td>
       <td>${b.w ? (100 * b.net / b.w).toFixed(1) + '%' : '–'}</td></tr>`).join('') + '</table>';
