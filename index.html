@@ -171,6 +171,42 @@ button.primary{box-shadow:0 3px 0 #b07d10;color:#3a2500}
 .yl div,.meter,.pv,select{border-radius:8px}
 .brand{font-weight:600;letter-spacing:.01em}
 #unit h3,#info h3,#city h2,.sheet h2,#bEnd{letter-spacing:.01em;font-weight:600}
+@media (max-height:520px){
+  body{font-size:13px}
+  #bar{padding-block:3px;gap:2px 10px;flex-wrap:nowrap}
+  .brand,.xl,#mini,#tip{display:none}
+  #stats{font-size:12px;gap:0 10px}
+  #bar nav{flex-wrap:nowrap;gap:4px}
+  #bar nav button{padding:3px 7px;font-size:12px}
+  #left{max-width:min(360px,48%)}
+  #unit,#info{padding:6px 9px}
+  #unit h3,#info h3{font-size:14px}
+  #unit .row button,#info .row button{padding:2px 8px}
+  #unit .meta,#info .meta{margin:1px 0 5px;font-size:12px}
+  #info .pv,.pv{font-size:12px;margin-bottom:5px}
+  .acts button{padding:4px 8px}
+  #dock{padding-bottom:6px;gap:8px}
+  #bEnd{padding:7px 14px;font-size:14px}
+  #bSub{padding:5px 9px}
+  #city{width:min(310px,100%);padding:8px 10px}
+  #city h2{font-size:17px}
+  #city h4,.sheet h4{margin:9px 0 4px}
+  #modal{padding:6px}
+  .sheet{padding:10px 14px}
+  .sheet h2{font-size:18px}
+  #view{top:4px;padding:6px 9px;gap:3px;max-height:calc(100% - 8px);overflow-y:auto}
+  .toast{font-size:12px;padding:3px 8px}
+  #toasts{max-width:42%}
+}
+.pv.promo{border-color:var(--brass)}.pv.promo .acts{margin-top:5px}.pv.promo small{color:var(--dim)}
+button{border-radius:10px;border-width:2px;font-weight:600;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+button.primary{box-shadow:0 3px 0 #b07d10;color:#3a2500}
+#unit,#info,#view,.sheet,.card,.toast,#tip,#mini{border-radius:12px}
+#unit,#info,#view,.sheet{border:2px solid var(--line);border-top:3px solid var(--brass)}
+#city{border-left:2px solid var(--line)}
+.yl div,.meter,.pv,select{border-radius:8px}
+.brand{font-weight:600;letter-spacing:.01em}
+#unit h3,#info h3,#city h2,.sheet h2,#bEnd{letter-spacing:.01em;font-weight:600}
 </style>
 
 <div id="app">
@@ -888,7 +924,10 @@ function renderBG(v){const x=bgx,{r0,r1,c0,c1,z}=v;if(bgc.width!==cv.width||bgc.
    if(wk&&wk.has(i)){x.strokeStyle='#fff';x.lineWidth=1.8;x.beginPath();x.moveTo(X-16,Y+8);x.lineTo(X+16,Y+8);x.stroke()}}}
  if(info!=null){const[c,r]=cr(info);hexPath(x,hx(c,r),hy(r),CB);x.strokeStyle='#fff';x.lineWidth=2.5;x.stroke()}
  if(su&&su.own===0){if(!reachC||reachC.id!==su.id||reachC.k!==su.c+','+su.r+','+su.mv)reachC={id:su.id,k:su.c+','+su.r+','+su.mv,m:reach(su)};
-  for(const i of reachC.m.keys()){const[c,r]=cr(i);hexPath(x,hx(c,r),hy(r),CB);x.fillStyle='rgba(255,255,255,.24)';x.fill()}
+  {const reg=new Set(reachC.m.keys());reg.add(idx(su.c,su.r));
+   for(const i of reg){if(i===idx(su.c,su.r))continue;const[c,r]=cr(i);hexPath(x,hx(c,r),hy(r),COR);x.fillStyle='rgba(255,255,255,.3)';x.fill()}
+   for(const[col,lw]of[[OUT,8],['#ffffff',4.5]]){x.strokeStyle=col;x.lineWidth=lw;x.beginPath();for(const i of reg){const[c,r]=cr(i),X=hx(c,r),Y=hy(r);
+     for(let d=0;d<6;d++){const n=nb(c,r,d);if(n&&reg.has(idx(n[0],n[1])))continue;const[a,b]=EDGE[d];x.moveTo(X+COR[a][0],Y+COR[a][1]);x.lineTo(X+COR[b][0],Y+COR[b][1])}}x.stroke()}}
   if(su.mv>0)for(const i of within(su.c,su.r,rngOf(su)||1)){if(!vis[i]||!canAttack(su,i))continue;const e=enemyAt(i,0);if(!e||!atWar(0,e.own))continue;const[c,r]=cr(i);hexPath(x,hx(c,r),hy(r),CB);x.strokeStyle='#ff4a3a';x.lineWidth=4;x.stroke()}
   if(su.goto!=null){const[c,r]=cr(su.goto);x.strokeStyle='#fff36b';x.lineWidth=3;x.beginPath();x.arc(hx(c,r),hy(r),9,0,7);x.stroke()}}}
 function render(now){if(!G)return;const v=viewport(),{r0,r1}=v;if(cv.width!==Math.round(v.w*v.dpr)||cv.height!==Math.round(v.h*v.dpr)){cv.width=Math.round(v.w*v.dpr);cv.height=Math.round(v.h*v.dpr);dirty=true}
