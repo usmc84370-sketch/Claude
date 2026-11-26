@@ -36,7 +36,7 @@ button.warn{border-color:var(--bad);color:var(--bad)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
 #bar nav{display:flex;gap:6px;flex-wrap:wrap}
 #bar nav button{padding:4px 9px}
-#bTech.need,#bPol.need{border-color:var(--brass);color:var(--brass)}
+#bTech.need,#bPol.need,#bRel.need{border-color:var(--brass);color:var(--brass)}
 #stage{flex:1;position:relative;min-height:0;overflow:hidden}
 #map{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}
 #toasts{position:absolute;top:8px;left:max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:4px;pointer-events:none;max-width:min(360px,70%)}
@@ -49,6 +49,8 @@ button.warn{border-color:var(--bad);color:var(--bad)}
 #unit{background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--brass);padding:9px 11px;min-width:0;max-width:430px}
 #unit h3{margin:0;font:16px var(--display);letter-spacing:.03em}
 #unit .meta{color:var(--dim);font-size:12.5px;margin:2px 0 7px}
+.pv{background:var(--panel2);border-left:3px solid var(--bad);padding:4px 8px;margin-bottom:7px;font-size:13px}
+.card{border:1px solid var(--line);border-radius:4px;padding:9px 10px;margin-top:8px}
 .acts{display:flex;flex-wrap:wrap;gap:5px}
 #right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-left:auto}
 #mini{border:1px solid var(--line);background:#0a0f14;cursor:pointer;max-width:100%}
@@ -59,7 +61,7 @@ button.warn{border-color:var(--bad);color:var(--bad)}
 #city h2{margin:0;font:21px var(--display);letter-spacing:.03em}
 #city h4,.sheet h4{margin:13px 0 5px;font-size:11px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--dim)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.yl{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:8px;text-align:center;font-variant-numeric:tabular-nums}
+.yl{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:8px;text-align:center;font-variant-numeric:tabular-nums}
 .yl div{background:var(--panel2);padding:4px 0;border-radius:3px}
 .yl small{display:block;color:var(--dim);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
 .meter{height:5px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:4px}
@@ -99,6 +101,7 @@ select{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid va
     <nav>
       <button id="bTech" data-act="tech">Research</button>
       <button id="bPol" data-act="policy">Policies</button>
+      <button id="bRel" data-act="faith">Faith</button>
       <button data-act="diplo">Diplomacy</button>
       <button data-act="menu">Menu</button>
     </nav>
@@ -123,12 +126,13 @@ select{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid va
 'use strict';
 /* ================= DATA ================= */
 const SQ=Math.sqrt(3),S0=36,MAXT=300;
-const TERR={ocean:{n:'Ocean',f:1,p:0,g:0,col:'#1c4166',water:1},coast:{n:'Coast',f:1,p:0,g:1,col:'#2d6a90',water:1},
- grass:{n:'Grassland',f:2,p:0,g:0,col:'#6b9a47'},plains:{n:'Plains',f:1,p:1,g:0,col:'#a8a04f'},desert:{n:'Desert',f:0,p:0,g:0,col:'#d5bf83'},
- tundra:{n:'Tundra',f:1,p:0,g:0,col:'#8b998b'},snow:{n:'Snow',f:0,p:0,g:0,col:'#dde6ea'},mountain:{n:'Mountain',f:0,p:0,g:0,col:'#6f6962',block:1}};
-const RES={wheat:{n:'Wheat',f:1,imp:'farm',col:'#f0d257',l:'W'},cattle:{n:'Cattle',f:1,imp:'pasture',col:'#b98b63',l:'C'},fish:{n:'Fish',f:2,col:'#9fd8ee',l:'F'},
- stone:{n:'Stone',p:1,imp:'quarry',col:'#c9c9c9',l:'S'},horses:{n:'Horses',p:1,imp:'pasture',col:'#8a5a2c',l:'H',strat:1},iron:{n:'Iron',p:1,imp:'mine',col:'#59626e',l:'I',strat:1},
- gems:{n:'Gems',g:3,imp:'mine',col:'#e56bd0',l:'G'},wine:{n:'Wine',g:2,imp:'plantation',col:'#a13a6a',l:'V'},spices:{n:'Spices',g:2,imp:'plantation',col:'#e0803a',l:'P'}};
+const TERR={ocean:{n:'Ocean',f:1,p:0,g:0,col:'#1d466e',water:1},coast:{n:'Coast',f:1,p:0,g:1,col:'#3277a0',water:1},
+ grass:{n:'Grassland',f:2,p:0,g:0,col:'#6fa148'},plains:{n:'Plains',f:1,p:1,g:0,col:'#b1a652'},desert:{n:'Desert',f:0,p:0,g:0,col:'#dcc487'},
+ tundra:{n:'Tundra',f:1,p:0,g:0,col:'#93a092'},snow:{n:'Snow',f:0,p:0,g:0,col:'#e3ebee'},mountain:{n:'Mountain',f:0,p:0,g:0,col:'#857d73',block:1}};
+const RES={wheat:{n:'Wheat',f:1,imp:'farm',col:'#f0d257'},cattle:{n:'Cattle',f:1,imp:'pasture',col:'#d9b48c'},fish:{n:'Fish',f:2,col:'#a9def2'},
+ stone:{n:'Stone',p:1,imp:'quarry',col:'#d2d2d2'},horses:{n:'Horses',p:1,imp:'pasture',col:'#7a4d23',dk:1,strat:1},iron:{n:'Iron',p:1,imp:'mine',col:'#525b68',dk:1,strat:1},
+ gems:{n:'Gems',g:3,imp:'mine',col:'#ee8fdd',lux:1},wine:{n:'Wine',g:2,imp:'plantation',col:'#93305f',dk:1,lux:1},spices:{n:'Spices',g:2,imp:'plantation',col:'#ee9450',lux:1},
+ silk:{n:'Silk',g:2,imp:'plantation',col:'#f4ecd2',lux:1},silver:{n:'Silver',g:2,imp:'mine',col:'#b9c6d6',lux:1}};
 const IMP={farm:{n:'Farm',f:1},mine:{n:'Mine',p:1,tech:'mining'},lumber:{n:'Lumber mill',p:1,tech:'construction'},pasture:{n:'Pasture',f:1,p:1,tech:'husbandry'},
  quarry:{n:'Quarry',p:1,tech:'masonry'},plantation:{n:'Plantation',g:2,tech:'pottery'}};
 const ERAS=['Ancient','Classical','Medieval','Renaissance','Industrial','Modern'];
@@ -145,9 +149,10 @@ const TECH={agriculture:T('Agriculture',0,0),pottery:T('Pottery',30,0,'agricultu
  industrialization:T('Industrialization',850,4,'banking','theory'),biology:T('Biology',850,4,'theory'),
  electricity:T('Electricity',1200,5,'industrialization'),ballistics:T('Ballistics',1200,5,'rifling','milsci'),parts:T('Replaceable Parts',1300,5,'rifling','industrialization'),
  combustion:T('Combustion',1500,5,'parts','electricity'),computers:T('Computers',1600,5,'electricity','biology'),rocketry:T('Rocketry',1900,5,'combustion','computers')};
-const TNOTE={seafaring:'Land units can cross coast',navigation:'Land units can cross ocean',biology:'Farms +1 food',industrialization:'Mines and lumber mills +1 production',rocketry:'Starship stages'};
+const TNOTE={seafaring:'Land units can embark onto coast',navigation:'Ships and embarked units cross ocean',biology:'Farms +1 food',industrialization:'Mines and lumber mills +1 production',rocketry:'Starship stages'};
 const U=(n,cls,cost,str,mv,tech,x={})=>({n,cls,cost,str,mv,tech,rs:0,rng:0,...x});
-const UNITS={settler:U('Settler','settler',80,0,2),worker:U('Worker','worker',50,0,2),scout:U('Scout','scout',25,4,3),
+const UNITS={settler:U('Settler','settler',80,0,2),worker:U('Worker','worker',50,0,2),caravan:U('Caravan','caravan',60,0,2,'husbandry'),missionary:U('Missionary','missionary',70,0,3,null,{needRel:1}),
+ scout:U('Scout','scout',25,4,3),
  warrior:U('Warrior','melee',30,8,2,null,{up:'spearman'}),archer:U('Archer','ranged',40,5,2,'archery',{rs:7,rng:2,up:'crossbow'}),
  spearman:U('Spearman','melee',50,11,2,'bronze',{up:'pikeman'}),horseman:U('Horseman','mounted',70,12,4,'riding',{res:'horses',up:'knight'}),
  swordsman:U('Swordsman','melee',75,15,2,'iron',{res:'iron',up:'musketeer'}),catapult:U('Catapult','siege',80,6,2,'mathematics',{rs:10,rng:2,up:'cannon'}),
@@ -155,20 +160,26 @@ const UNITS={settler:U('Settler','settler',80,0,2),worker:U('Worker','worker',50
  knight:U('Knight','mounted',120,22,4,'chivalry',{res:'horses',up:'cavalry'}),musketeer:U('Musketeer','gun',150,28,2,'gunpowder',{up:'rifleman'}),
  cannon:U('Cannon','siege',180,14,2,'metallurgy',{rs:26,rng:2,up:'artillery'}),cavalry:U('Cavalry','mounted',220,36,4,'milsci',{res:'horses',up:'tank'}),
  rifleman:U('Rifleman','gun',220,38,2,'rifling',{up:'infantry'}),artillery:U('Artillery','siege',300,20,2,'ballistics',{rs:40,rng:3}),
- infantry:U('Infantry','gun',320,55,2,'parts'),tank:U('Tank','armor',380,70,5,'combustion')};
+ infantry:U('Infantry','gun',320,55,2,'parts'),tank:U('Tank','armor',380,70,5,'combustion'),
+ galley:U('Galley','ship',50,9,4,'seafaring',{naval:1,coastOnly:1,up:'caravel'}),caravel:U('Caravel','ship',110,20,5,'navigation',{naval:1,up:'ironclad'}),
+ frigate:U('Frigate','shipr',170,22,5,'astronomy',{naval:1,rs:28,rng:2,up:'battleship'}),ironclad:U('Ironclad','ship',260,45,5,'industrialization',{naval:1}),
+ battleship:U('Battleship','shipr',380,55,5,'combustion',{naval:1,rs:60,rng:3})};
 const B=(n,cost,tech,x)=>({n,cost,tech,...x});
-const BLD={monument:B('Monument',40,null,{c:2}),granary:B('Granary',60,'pottery',{f:2}),barracks:B('Barracks',70,'bronze',{xp:15}),library:B('Library',75,'writing',{sciPop:1}),
- walls:B('Walls',70,'masonry',{def:5,hp:50}),market:B('Market',100,'currency',{g:2,pg:.25}),workshop:B('Workshop',100,'casting',{p:2,pp:.1}),
- aqueduct:B('Aqueduct',100,'engineering',{keep:.4}),temple:B('Temple',90,'philosophy',{c:3}),harbor:B('Harbor',120,'seafaring',{water:1,coastal:1}),
+const BLD={monument:B('Monument',40,null,{c:2}),shrine:B('Shrine',40,'pottery',{fa:2}),granary:B('Granary',60,'pottery',{f:2}),barracks:B('Barracks',70,'bronze',{xp:15}),library:B('Library',75,'writing',{sciPop:1}),
+ walls:B('Walls',70,'masonry',{def:5,hp:50}),arena:B('Arena',100,'construction',{hap:3}),market:B('Market',100,'currency',{g:2,pg:.25}),workshop:B('Workshop',100,'casting',{p:2,pp:.1}),
+ aqueduct:B('Aqueduct',100,'engineering',{keep:.4}),temple:B('Temple',90,'philosophy',{fa:2,c:1,hap:1}),harbor:B('Harbor',120,'seafaring',{water:1,coastal:1}),
  university:B('University',160,'education',{ps:.33}),castle:B('Castle',150,'chivalry',{def:7,hp:50}),bank:B('Bank',200,'banking',{g:2,pg:.25}),
- theatre:B('Theatre',200,'printing',{c:4}),observatory:B('Observatory',220,'astronomy',{s:4}),factory:B('Factory',300,'industrialization',{p:4,pp:.25}),
+ theatre:B('Theatre',200,'printing',{c:4,hap:2}),observatory:B('Observatory',220,'astronomy',{s:4}),factory:B('Factory',300,'industrialization',{p:4,pp:.25}),
  school:B('Public School',300,'theory',{s:3,sciPop:1}),hospital:B('Hospital',300,'biology',{f:5}),powerplant:B('Power Plant',380,'electricity',{pp:.25}),lab:B('Research Lab',450,'computers',{ps:.5})};
-const WON={pyramids:B('Pyramids',160,'masonry',{pp:.2,c:1}),greatlibrary:B('Great Library',180,'writing',{s:3,freeTech:1}),colossus:B('Colossus',170,'bronze',{g:5}),
- gardens:B('Hanging Gardens',200,'mathematics',{f:6}),oracle:B('Oracle',190,'philosophy',{c:6}),greatwall:B('Great Wall',220,'construction',{wall:1}),
- cathedral:B('Grand Cathedral',380,'education',{c:8,g:3}),academy:B('Royal Academy',520,'astronomy',{ps:.25,s:5}),exposition:B('World Exposition',900,'industrialization',{pp:.25,pg:.25})};
+const WON={stones:B('Standing Stones',140,'pottery',{fa:4,c:1}),pyramids:B('Pyramids',160,'masonry',{pp:.2,c:1}),greatlibrary:B('Great Library',180,'writing',{s:3,freeTech:1}),colossus:B('Colossus',170,'bronze',{g:5}),
+ gardens:B('Hanging Gardens',200,'mathematics',{f:6,hap:1}),oracle:B('Oracle',190,'philosophy',{c:6}),greatwall:B('Great Wall',220,'construction',{wall:1}),
+ cathedral:B('Grand Cathedral',380,'education',{c:8,g:3,fa:3,hap:2}),academy:B('Royal Academy',520,'astronomy',{ps:.25,s:5}),exposition:B('World Exposition',900,'industrialization',{pp:.25,pg:.25,hap:3})};
 const POL={agrarian:{n:'Agrarianism',d:'+10% food in every city'},guilds:{n:'Guilds',d:'+10% production in every city'},mercantile:{n:'Mercantilism',d:'+15% gold in every city'},
  scholarship:{n:'Scholarship',d:'+10% science in every city'},heritage:{n:'Heritage',d:'+2 culture in every city'},discipline:{n:'Discipline',d:'+10% combat strength'},
  expansion:{n:'Expansionism',d:'Settlers cost 30% less'},army:{n:'Standing Army',d:'Unit upkeep halved'}};
+const BELIEF={tithe:{n:'Tithe',d:'+1 gold for every 4 followers anywhere in the world'},festival:{n:'Harvest Festival',d:'+2 food in your cities of this faith'},cloisters:{n:'Cloisters',d:'+2 science in your cities of this faith'},
+ pageantry:{n:'Pageantry',d:'+2 culture in your cities of this faith'},serenity:{n:'Serenity',d:'+1 happiness for each of your cities of this faith'},bulwark:{n:'Bulwark',d:'+6 defense in your cities of this faith'}};
+const RELS=[['The Solar Path','#f2c94c'],['Tidefaith','#58c7d8'],['Ember Covenant','#ef7b45'],['The Old Stones','#b8b8a8'],['Verdant Circle','#7fd27a']];
 const NATIONS=[{n:'Aurelian League',col:'#c0392b',cities:['Aurelis','Pontara','Vessane','Caldrum','Oristo','Marrow Bay','Thessany','Lumera','Corvane','Estrel']},
  {n:'Veshari Dominion',col:'#2f66c9',cities:['Vesh','Kadir','Solmaan','Tarakesh','Imruz','Bashir','Zalhem','Nurat','Qasim','Dehra']},
  {n:'Korrund Holds',col:'#d9771f',cities:['Korr','Hammerfell','Dunmark','Grettir','Skaldheim','Ironwick','Braga','Tornholt','Ulfsted','Varn']},
@@ -178,7 +189,7 @@ const NATIONS=[{n:'Aurelian League',col:'#c0392b',cities:['Aurelis','Pontara','V
 const FOCUS={bal:{n:'Balanced',f:3,p:3,g:1.5},food:{n:'Food',f:5,p:1.5,g:1},prod:{n:'Production',f:2,p:5,g:1},gold:{n:'Gold',f:2,p:2,g:5}};
 
 /* ================= STATE + HELPERS ================= */
-let G=null,uAt=new Map(),CM=new Map(),vis=null,sel=null,cityOpen=null,cam={x:0,y:0,z:1},fxs=[],labels=[],dirty=true,miniDirty=true,asks=[],reachC=null;
+let G=null,uAt=new Map(),cAt=new Map(),CM=new Map(),vis=null,sel=null,cityOpen=null,cam={x:0,y:0,z:1},fxs=[],labels=[],dirty=true,miniDirty=true,asks=[],askFns=[],reachC=null,pv=null,animUntil=0,connC={},lastTap=null;
 const $=s=>document.querySelector(s);
 const R=(a,b)=>a+Math.random()*(b-a),RI=n=>Math.floor(Math.random()*n),pick=a=>a[RI(a.length)];
 const idx=(c,r)=>r*G.W+c,cr=i=>[i%G.W,(i/G.W)|0],inb=(c,r)=>c>=0&&r>=0&&c<G.W&&r<G.H;
@@ -196,11 +207,12 @@ const atWar=(a,b)=>a!==b&&(!!G.players[a].barb||!!G.players[b].barb||!!G.players
 const eraOf=pl=>Math.max(0,...Object.keys(pl.techs).map(t=>TECH[t].era));
 const level=u=>[10,30,60,100,150].filter(x=>u.xp>=x).length;
 const isMil=u=>UNITS[u.type].str>0&&u.type!=='scout';
+const mapOf=u=>UNITS[u.type].str?uAt:cAt;
 const yearOf=t=>{const y=-4000+(t-1)*20;return y<0?-y+' BC':(y||1)+' AD'};
-function rebuild(){uAt=new Map();CM=new Map();for(const u of G.units)uAt.set(idx(u.c,u.r),u);for(const c of G.cities)CM.set(c.id,c);vis=new Uint8Array(G.W*G.H);updateVis()}
+function rebuild(){uAt=new Map();cAt=new Map();CM=new Map();connC={};for(const u of G.units)mapOf(u).set(idx(u.c,u.r),u);for(const c of G.cities)CM.set(c.id,c);vis=new Uint8Array(G.W*G.H);updateVis()}
 function note(msg,cls=''){if(!G||G.autoplay)return;G.log.push('Turn '+G.turn+': '+msg);if(G.log.length>40)G.log.shift();
  const d=document.createElement('div');d.className='toast '+cls;d.textContent=msg;const box=$('#toasts');box.appendChild(d);while(box.children.length>5)box.firstChild.remove();setTimeout(()=>d.remove(),6000)}
-function fx(i,txt,col){if(!vis[i])return;fxs.push({i,txt:String(txt),col:col||'#ffd0c8',t:performance.now()});dirty=true}
+function fx(i,txt,col){if(!vis||!vis[i])return;fxs.push({i,txt:String(txt),col:col||'#ffd0c8',t:performance.now()});dirty=true}
 
 /* ================= MAP GEN ================= */
 function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -223,26 +235,26 @@ function genMap(W,H,seed){const rnd=mulberry(seed),ne=mkNoise(rnd),nm=mkNoise(rn
   while(st.length){const k=st.pop();n++;for(const j of nbrI(k)){const tj=tiles[j];if(!TERR[tj.t].water&&!TERR[tj.t].block&&!tj.lm){tj.lm=lm;st.push(j)}}}
   if(n>bigN){bigN=n;big=lm}}
  for(let i=0;i<N;i++){const t=tiles[i],flat=!t.h&&!t.f;if(t.t==='mountain')continue;
-  if(t.t==='coast'){if(rnd()<.08)t.res='fish';continue}if(t.t==='ocean'||rnd()>.13)continue;const o=[];
+  if(t.t==='coast'){if(rnd()<.08)t.res='fish';continue}if(t.t==='ocean'||rnd()>.14)continue;const o=[];
   if(flat&&(t.t==='grass'||t.t==='plains'))o.push('wheat','horses','wine');if(flat&&t.t==='grass')o.push('cattle','cattle');
-  if(t.h&&!t.f)o.push('iron','stone','gems');if(t.t==='desert'||t.t==='tundra')o.push('stone','iron');if(t.f)o.push('spices','gems');
+  if(t.h&&!t.f)o.push('iron','stone','gems','silver');if(t.t==='desert'||t.t==='tundra')o.push('stone','iron','silver');if(t.f)o.push('spices','gems','silk');
   if(o.length)t.res=o[Math.floor(rnd()*o.length)]}
  return big}
 function rawSite(i){const t=G.tiles[i];if(TERR[t.t].water||TERR[t.t].block)return-1;const[c,r]=cr(i);let s=0;
  for(const j of within(c,r,2)){const y=tileYield(j);s+=y.f*1.2+y.p+y.g*.6+(G.tiles[j].res?1.5:0)}return s}
 function newGame(o){const sz=[[38,24],[48,30],[62,38]][o.size],seed=o.seed||(Math.random()*1e9)|0;
- G={v:1,seed,turn:1,players:[],cities:[],units:[],nid:1,wonders:{},log:[],over:null,diff:o.diff};
+ G={v:2,seed,turn:1,players:[],cities:[],units:[],nid:1,wonders:{},log:[],over:null,diff:o.diff,rels:[],routes:[],deals:[],roadVer:0};
  const big=genMap(sz[0],sz[1],seed);
  const order=[o.nation,...NATIONS.map((_,i)=>i).filter(i=>i!==o.nation).sort(()=>Math.random()-.5)].slice(0,o.ai+1);
- order.forEach((ni,id)=>G.players.push({id,name:NATIONS[ni].n,nat:ni,color:NATIONS[ni].col,alive:true,gold:20,sci:0,research:null,techs:{agriculture:1},culture:0,policies:[],
-  war:{},warT:{},met:{},ship:0,cn:0,aggr:R(.5,1.5),seen:id===0?new Array(G.W*G.H).fill(0):null}));
- G.players.push({id:G.players.length,barb:true,name:'Raiders',color:'#2b2b2b',alive:true,gold:0,techs:{},policies:[],war:{},warT:{},met:{}});
+ const base=id=>({id,alive:true,gold:20,sci:0,research:null,techs:{},culture:0,policies:[],war:{},warT:{},met:{},ob:{},ship:0,cn:0,faith:0,rel:null,ga:0,gaT:0,gaN:0,aggr:1});
+ order.forEach((ni,id)=>G.players.push({...base(id),name:NATIONS[ni].n,nat:ni,color:NATIONS[ni].col,techs:{agriculture:1},aggr:R(.5,1.5),seen:id===0?new Array(G.W*G.H).fill(0):null}));
+ G.players.push({...base(G.players.length),barb:true,name:'Raiders',color:'#2b2b2b',gold:0});
  const cand=[];for(let i=0;i<G.tiles.length;i++)if(G.tiles[i].lm===big&&!G.tiles[i].h){const s=rawSite(i);if(s>30)cand.push([i,s])}
  const starts=[pick(cand)[0]];
  while(starts.length<order.length){let b=-1,bs=-1;for(const[i,s]of cand){const d=Math.min(...starts.map(j=>distI(i,j)));const v=d*10+s*.3;if(v>bs){bs=v;b=i}}starts.push(b)}
- uAt=new Map();CM=new Map();
- starts.forEach((i,p)=>{const[c,r]=cr(i);spawn(p,'settler',c,r);const f=nbrI(i).find(j=>!isWater(j)&&!TERR[G.tiles[j].t].block&&!uAt.has(j));if(f!=null){const[a,b]=cr(f);spawn(p,'warrior',a,b)}});
- rebuild();const s=unitsOf(0)[0];center(s.c,s.r);sel=s.id;cityOpen=null;
+ uAt=new Map();cAt=new Map();CM=new Map();
+ starts.forEach((i,p)=>{const[c,r]=cr(i);spawn(p,'settler',c,r);spawn(p,'warrior',c,r)});
+ rebuild();const s=unitsOf(0)[0];center(s.c,s.r);sel=s.id;cityOpen=null;pv=null;
  note('Your people are ready to settle. Found your capital.');}
 
 /* ================= ECONOMY ================= */
@@ -255,24 +267,37 @@ const growNeed=pop=>Math.round(12+7*(pop-1)+Math.pow(pop,1.6));
 const borderCost=c=>Math.round(8+5*Math.pow(Math.max(0,c.tiles.length-7),1.4));
 const cityMaxHp=c=>200+c.b.reduce((s,b)=>s+((BLD[b]||{}).hp||0),0);
 const hasWonder=(p,w)=>G.wonders[w]&&CM.get(G.wonders[w])&&CM.get(G.wonders[w]).own===p;
-function cityStr(c){const pl=G.players[c.own];let s=8+c.pop*1.2+eraOf(pl)*5+c.b.reduce((a,b)=>a+((BLD[b]||{}).def||0),0);if(hasWonder(c.own,'greatwall'))s+=6;
+const myFaith=(c,b)=>c.rel!=null&&G.rels[c.rel].owner===c.own&&G.rels[c.rel].belief===b;
+function cityStr(c){const pl=G.players[c.own];let s=8+c.pop*1.2+eraOf(pl)*5+c.b.reduce((a,b)=>a+((BLD[b]||{}).def||0),0);if(hasWonder(c.own,'greatwall'))s+=6;if(myFaith(c,'bulwark'))s+=6;
  const g=uAt.get(idx(c.c,c.r));if(g&&g.own===c.own)s+=UNITS[g.type].str*.25;return s}
-function cityYields(c){const pl=G.players[c.own],ctr=idx(c.c,c.r),harbor=c.b.includes('harbor'),w=FOCUS[c.focus||'bal'];
- let y=tileYield(ctr,pl),f=Math.max(2,y.f),p=Math.max(1,y.p),g=Math.max(1,y.g),s=0,cu=1;
+function luxOf(p){const own={};for(const c of G.cities)if(c.own===p)for(const i of c.tiles){const r=G.tiles[i].res;if(r&&RES[r].lux)own[r]=(own[r]||0)+1}
+ const set={...own};for(const d of G.deals){if(d.from===p&&set[d.res])set[d.res]--;if(d.to===p)set[d.res]=(set[d.res]||0)+1}return{own,set}}
+function happiness(pl){if(pl.barb)return 0;const cs=citiesOf(pl.id);let h=7+(pl.id===0?[3,0,-1][G.diff]:[0,2,4][G.diff]),pop=0;const L=luxOf(pl.id).set;for(const r in L)if(L[r]>0)h+=4;
+ for(const c of cs){pop+=c.pop;for(const b of c.b)h+=(BLD[b]||WON[b]).hap||0;if(myFaith(c,'serenity'))h++}return Math.round(h-cs.length*3-pop*.5)}
+function connected(p){const key=G.turn+':'+G.roadVer+':'+G.cities.length,cc=connC[p];if(cc&&cc.key===key)return cc.set;const set=new Set(),cap=capOf(p);
+ if(cap){const st=[idx(cap.c,cap.r)],sn=new Set(st);while(st.length){const i=st.pop(),ct=cityAtI(i);if(ct&&ct.own===p)set.add(ct.id);for(const j of nbrI(i)){if(sn.has(j))continue;const t=G.tiles[j];if(t.road||t.city){sn.add(j);st.push(j)}}}
+  if(cap.b.includes('harbor'))for(const c of G.cities)if(c.own===p&&c.b.includes('harbor'))set.add(c.id)}
+ connC[p]={key,set};return set}
+function cityYields(c,hap){const pl=G.players[c.own],ctr=idx(c.c,c.r),harbor=c.b.includes('harbor'),w=FOCUS[c.focus||'bal'];if(hap==null)hap=happiness(pl);
+ let y=tileYield(ctr,pl),f=Math.max(2,y.f),p=Math.max(1,y.p),g=Math.max(1,y.g),s=0,cu=1,fa=0;
  const cand=[];for(const i of c.tiles){if(i===ctr||TERR[G.tiles[i].t].block)continue;const e=uAt.get(i);if(e&&atWar(e.own,c.own))continue;const t=tileYield(i,pl);if(harbor&&isWater(i))t.f++;t.i=i;cand.push(t)}
  const worked=[];let idle=0;
  for(let k=0;k<c.pop;k++){if(!cand.length){idle++;continue}const need=f-2*c.pop<1;let bi=0,bs=-1;
   cand.forEach((t,j)=>{const sc=t.f*(need?w.f+4:w.f)+t.p*w.p+t.g*w.g;if(sc>bs){bs=sc;bi=j}});const t=cand.splice(bi,1)[0];worked.push(t.i);f+=t.f;p+=t.p;g+=t.g}
- p+=idle;const cap=capOf(c.own)===c;s+=c.pop+(cap?3:0);g+=Math.floor(c.pop/2)+(cap?3:0);if(cap)cu+=1;
+ p+=idle;const cap=capOf(c.own)===c,conn=!cap&&connected(c.own).has(c.id);s+=c.pop+(cap?3:0);g+=Math.floor(c.pop/2)+(cap?3:0);if(cap){cu+=1;fa+=1}if(conn)g+=2+Math.floor(c.pop/4);
  let pf=0,pp=0,pg=0,ps=0,maint=0;
- for(const b of c.b){const d=BLD[b]||WON[b];f+=d.f||0;p+=d.p||0;g+=d.g||0;s+=d.s||0;cu+=d.c||0;pp+=d.pp||0;pg+=d.pg||0;ps+=d.ps||0;if(d.sciPop)s+=Math.floor(c.pop/2)*d.sciPop;if(BLD[b]&&b!=='monument')maint++}
+ for(const b of c.b){const d=BLD[b]||WON[b];f+=d.f||0;p+=d.p||0;g+=d.g||0;s+=d.s||0;cu+=d.c||0;fa+=d.fa||0;pp+=d.pp||0;pg+=d.pg||0;ps+=d.ps||0;if(d.sciPop)s+=Math.floor(c.pop/2)*d.sciPop;if(BLD[b]&&b!=='monument'&&b!=='shrine')maint++}
+ if(c.rel!=null){fa+=1;if(myFaith(c,'festival'))f+=2;if(myFaith(c,'cloisters'))s+=2;if(myFaith(c,'pageantry'))cu+=2}
  const P=pl.policies;if(P.includes('agrarian'))pf+=.1;if(P.includes('guilds'))pp+=.1;if(P.includes('mercantile'))pg+=.15;if(P.includes('scholarship'))ps+=.1;if(P.includes('heritage'))cu+=2;
+ if(pl.gaT>0){pp+=.2;pg+=.2}if(hap<=-10)pp-=.25;
  f=Math.round(f*(1+pf));p=Math.round(p*(1+pp));g=Math.round(g*(1+pg));s=Math.round(s*(1+ps));
- return{f,p,g,s,c:cu,surplus:f-2*c.pop,worked,maint}}
+ return{f,p,g,s,c:cu,fa,surplus:f-2*c.pop,worked,maint,conn}}
 function playerRes(p){const o={};for(const c of G.cities)if(c.own===p)for(const i of c.tiles){const r=G.tiles[i].res;if(r)o[r]=1}return o}
-function income(pl){let g=0,s=0,c=0;for(const ct of citiesOf(pl.id)){const y=cityYields(ct);g+=y.g-y.maint;s+=y.s;c+=y.c}
- const n=unitsOf(pl.id).length,free=3+2*citiesOf(pl.id).length;let up=Math.max(0,n-free);if(pl.policies.includes('army'))up=Math.ceil(up/2);g-=up;
- if(!pl.human&&!G.autoplay||pl.id!==0)s=Math.round(s*[.85,1,1.25][G.diff]);return{g,s,c,up}}
+function tradeGold(pl){let g=0;for(const r of G.routes){if(r.own===pl.id)g+=r.g;else{const b=CM.get(r.b);if(b&&b.own===pl.id)g+=1}}return g}
+function income(pl){let g=0,s=0,c=0,fa=0;const hap=happiness(pl);for(const ct of citiesOf(pl.id)){const y=cityYields(ct,hap);g+=y.g-y.maint;s+=y.s;c+=y.c;fa+=y.fa}
+ const n=unitsOf(pl.id).length,free=3+2*citiesOf(pl.id).length;let up=Math.max(0,n-free);if(pl.policies.includes('army'))up=Math.ceil(up/2);g-=up;g+=tradeGold(pl);
+ if(pl.rel!=null&&G.rels[pl.rel].belief==='tithe'){let fol=0;for(const ct of G.cities)if(ct.rel===pl.rel)fol+=ct.pop;g+=Math.floor(fol/4)}
+ if(pl.id!==0)s=Math.round(s*[.85,1,1.25][G.diff]);return{g,s,c,fa,up,hap}}
 const policyCost=pl=>Math.round(20+18*Math.pow(pl.policies.length,1.7));
 const availTechs=pl=>Object.keys(TECH).filter(t=>!pl.techs[t]&&TECH[t].pre.every(p=>pl.techs[p]));
 const availPol=pl=>Object.keys(POL).filter(p=>!pl.policies.includes(p));
@@ -280,24 +305,26 @@ function itemCost(pl,b){if(b.k==='u'){let c=UNITS[b.id].cost;if(b.id==='settler'
  return b.k==='b'?BLD[b.id].cost:b.k==='w'?WON[b.id].cost:700}
 const itemName=b=>b.k==='u'?UNITS[b.id].n:b.k==='b'?BLD[b.id].n:b.k==='w'?WON[b.id].n:'Starship stage';
 function unitAvail(pl,id,res){const d=UNITS[id];return(!d.tech||pl.techs[d.tech])&&(!d.res||res[d.res])}
-function buildOptions(c){const pl=G.players[c.own],res=playerRes(pl.id),o=[];
- for(const id in UNITS){const d=UNITS[id];if(!unitAvail(pl,id,res))continue;if(d.up&&unitAvail(pl,d.up,res))continue;if(id==='warrior'&&pl.techs.gunpowder)continue;if(id==='settler'&&c.pop<2)continue;o.push({k:'u',id})}
- const coastal=nbrI(idx(c.c,c.r)).some(isWater);
+function buildOptions(c){const pl=G.players[c.own],res=playerRes(pl.id),o=[],coastal=nbrI(idx(c.c,c.r)).some(isWater);
+ for(const id in UNITS){const d=UNITS[id];if(!unitAvail(pl,id,res))continue;if(d.up&&unitAvail(pl,d.up,res))continue;if(id==='warrior'&&pl.techs.gunpowder)continue;if(id==='galley'&&pl.techs.navigation)continue;
+  if(id==='settler'&&(c.pop<2||happiness(pl)<=-10))continue;if(d.naval&&!coastal)continue;if(d.needRel&&(pl.rel==null||c.rel!==pl.rel))continue;o.push({k:'u',id})}
  for(const id in BLD){const d=BLD[id];if(d.tech&&!pl.techs[d.tech]||c.b.includes(id)||d.coastal&&!coastal)continue;o.push({k:'b',id})}
  for(const id in WON){if(!pl.techs[WON[id].tech]||G.wonders[id])continue;o.push({k:'w',id})}
  if(pl.techs.rocketry&&pl.ship<3)o.push({k:'p',id:'ship'});return o}
-function bDesc(d){const o=[];for(const[k,n]of[['f','food'],['p','production'],['g','gold'],['s','science'],['c','culture']])if(d[k])o.push('+'+d[k]+' '+n);
+function bDesc(d){const o=[];for(const[k,n]of[['f','food'],['p','production'],['g','gold'],['s','science'],['c','culture'],['fa','faith'],['hap','happiness']])if(d[k])o.push('+'+d[k]+' '+n);
  for(const[k,n]of[['pp','production'],['pg','gold'],['ps','science']])if(d[k])o.push('+'+Math.round(d[k]*100)+'% '+n);
  if(d.sciPop)o.push('+1 science per 2 citizens');if(d.def)o.push('+'+d.def+' city defense');if(d.xp)o.push('New units start with '+d.xp+' XP');
- if(d.keep)o.push('Keeps 40% food after growth');if(d.water)o.push('+1 food on water tiles');if(d.freeTech)o.push('One free technology');if(d.wall)o.push('+6 defense in all your cities');return o.join(', ')}
-function uDesc(d){return d.str?('Strength '+d.str+(d.rs?', ranged '+d.rs+' at range '+d.rng:'')+', moves '+d.mv+(d.res?', needs '+RES[d.res].n:'')):d.cls==='settler'?'Founds a city. Costs 1 citizen':'Improves tiles'}
-function spawn(p,type,c,r){const u={id:G.nid++,own:p,type,c,r,hp:100,mv:UNITS[type].mv,xp:0};G.units.push(u);uAt.set(idx(c,r),u);return u}
-function kill(u){if(u.dead)return;u.dead=true;G.units.splice(G.units.indexOf(u),1);const i=idx(u.c,u.r);if(uAt.get(i)===u)uAt.delete(i);if(sel===u.id)sel=null;dirty=true}
-function freeSpot(c,p){const i=idx(c.c,c.r);if(!uAt.has(i))return i;return nbrI(i).find(j=>!uAt.has(j)&&!isWater(j)&&!TERR[G.tiles[j].t].block&&!G.tiles[j].city)}
+ if(d.keep)o.push('Keeps 40% food after growth');if(d.water)o.push('+1 food on water tiles, links city to a capital with a harbor');if(d.freeTech)o.push('One free technology');if(d.wall)o.push('+6 defense in all your cities');return o.join(', ')}
+function uDesc(d){return d.str?((d.naval?'Ship. ':'')+'Strength '+d.str+(d.rs?', ranged '+d.rs+' at range '+d.rng:'')+', moves '+d.mv+(d.res?', needs '+RES[d.res].n:'')+(d.coastOnly?', coast only':'')):
+ d.cls==='settler'?'Founds a city. Costs 1 citizen':d.cls==='caravan'?'Opens a trade route with another city':d.cls==='missionary'?'Spreads your religion to a city':'Improves tiles and builds roads'}
+function spawn(p,type,c,r){const u={id:G.nid++,own:p,type,c,r,hp:100,mv:UNITS[type].mv,xp:0};G.units.push(u);mapOf(u).set(idx(c,r),u);return u}
+function kill(u){if(u.dead)return;u.dead=true;G.units.splice(G.units.indexOf(u),1);const i=idx(u.c,u.r),m=mapOf(u);if(m.get(i)===u)m.delete(i);if(sel===u.id){sel=null;pv=null}dirty=true}
+function freeSpot(c,type){const d=UNITS[type],i=idx(c.c,c.r);if(d.naval)return nbrI(i).find(j=>isWater(j)&&!uAt.has(j)&&!cAt.has(j));
+ if(!(d.str?uAt:cAt).has(i))return i;return nbrI(i).find(j=>!uAt.has(j)&&!cAt.has(j)&&!isWater(j)&&!TERR[G.tiles[j].t].block&&!G.tiles[j].city)}
 function learn(pl,t){pl.techs[t]=1;if(pl.id===0)note('Discovered '+TECH[t].n+'.','good')}
 function complete(c){const pl=G.players[c.own],b=c.build,cost=itemCost(pl,b);
- if(b.k==='u'){const s=freeSpot(c);if(s==null)return false;const[x,y]=cr(s),u=spawn(c.own,b.id,x,y);if(c.b.includes('barracks')&&UNITS[b.id].str)u.xp=15;if(b.id==='settler')c.pop--;u.mv=0}
- else if(b.k==='b')c.b.push(b.id);
+ if(b.k==='u'){const s=freeSpot(c,b.id);if(s==null)return false;const[x,y]=cr(s),u=spawn(c.own,b.id,x,y);if(c.b.includes('barracks')&&UNITS[b.id].str)u.xp=15;if(b.id==='settler')c.pop--;if(b.id==='caravan')u.home=c.id;u.mv=0}
+ else if(b.k==='b'){c.b.push(b.id);G.roadVer++}
  else if(b.k==='w'){if(G.wonders[b.id]){c.build=null;return false}c.b.push(b.id);G.wonders[b.id]=c.id;
   if(WON[b.id].freeTech){const a=availTechs(pl).sort((x,y)=>TECH[x].cost-TECH[y].cost)[0];if(a)learn(pl,a)}
   note(pl.name+' completed the '+WON[b.id].n+' in '+c.name+'.',c.own===0?'good':'');
@@ -308,13 +335,14 @@ function claimTile(c){let best=-1,bs=-1e9;for(const i of within(c.c,c.r,3)){cons
   const y=tileYield(i),s=y.f+y.p+y.g+(t.res?3:0)-distI(i,idx(c.c,c.r))*1.5-(t.t==='mountain'?3:0);if(s>bs){bs=s;best=i}}
  if(best<0)return false;G.tiles[best].own=c.id;c.tiles.push(best);return true}
 function foundCity(u){const pl=G.players[u.own],i=idx(u.c,u.r),nat=NATIONS[pl.nat],nm=nat.cities[pl.cn%nat.cities.length];
- const c={id:G.nid++,own:u.own,orig:u.own,name:(pl.cn>=nat.cities.length?'New ':'')+nm,c:u.c,r:u.r,pop:1,food:0,prod:0,build:null,b:[],hp:200,cul:0,tiles:[],focus:'bal',cap:pl.cn===0};
+ const c={id:G.nid++,own:u.own,orig:u.own,name:(pl.cn>=nat.cities.length?'New ':'')+nm,c:u.c,r:u.r,pop:1,food:0,prod:0,build:null,b:[],hp:200,cul:0,tiles:[],focus:'bal',cap:pl.cn===0,rel:null,rp:{}};
  pl.cn++;kill(u);G.cities.push(c);CM.set(c.id,c);const t=G.tiles[i];t.city=c.id;t.imp=null;t.f=0;if(t.own&&t.own!==c.id){const o=CM.get(t.own);o.tiles.splice(o.tiles.indexOf(i),1)}t.own=c.id;c.tiles.push(i);
  for(const j of nbrI(i))if(!G.tiles[j].own){G.tiles[j].own=c.id;c.tiles.push(j)}
  if(u.own===0){note('Founded '+c.name+'.','good');updateVis();openCity(c.id)}miniDirty=true;return c}
 function canFound(u){const i=idx(u.c,u.r),t=G.tiles[i];if(isWater(i)||TERR[t.t].block)return false;if(t.own&&CM.get(t.own).own!==u.own)return false;return!G.cities.some(c=>dist(c.c,c.r,u.c,u.r)<3)}
-function endEconomy(pl){if(pl.barb)return;const inc=income(pl),mul=pl.id===0?1:[.85,1,1.25][G.diff];
- for(const c of citiesOf(pl.id)){const y=cityYields(c);c.food+=y.surplus;const need=growNeed(c.pop);
+function endEconomy(pl){if(pl.barb)return;const inc=income(pl),hap=inc.hap,mul=pl.id===0?1:[.85,1,1.25][G.diff];
+ if(pl.gaT>0)pl.gaT--;else if(hap>0){pl.ga+=hap;if(pl.ga>=150+130*pl.gaN){pl.ga=0;pl.gaN++;pl.gaT=8;if(pl.id===0)note('A golden age begins: +20% production and gold for 8 turns.','good')}}
+ for(const c of citiesOf(pl.id)){const y=cityYields(c,hap);let sp=y.surplus;if(sp>0&&hap<0)sp=Math.floor(sp/3);c.food+=sp;const need=growNeed(c.pop);
   if(c.food>=need){c.pop++;c.food=c.b.includes('aqueduct')?Math.round(need*.4):0}else if(c.food<0){if(c.pop>1){c.pop--;if(pl.id===0)note(c.name+' is starving.','bad')}c.food=0}
   if(c.build){c.prod+=y.p*mul;if(c.prod>=itemCost(pl,c.build))complete(c)}else pl.gold+=Math.floor(y.p/2);
   c.cul+=y.c;let guard=0;while(c.cul>=borderCost(c)&&guard++<3){c.cul-=borderCost(c);if(!claimTile(c))break}
@@ -323,64 +351,108 @@ function endEconomy(pl){if(pl.barb)return;const inc=income(pl),mul=pl.id===0?1:[
   if(tg){const d=dmg(cityStr(c)*.8,uStr(tg,'def'));const ti=idx(tg.c,tg.r);tg.hp-=d;fx(ti,-d);if(tg.hp<=0){if(tg.own===0)note('Your '+UNITS[tg.type].n+' was destroyed by '+c.name+'.','bad');kill(tg)}}}
  pl.gold+=inc.g;let sci=inc.s;if(pl.gold<0){pl.gold=0;sci=Math.floor(sci/2);const us=unitsOf(pl.id);if(us.length>2&&Math.random()<.3){const v=us[us.length-1];if(pl.id===0)note('Unpaid, your '+UNITS[v.type].n+' deserted.','bad');kill(v)}}
  pl.culture+=inc.c;pl.sci+=sci;
+ if(pl.rel==null&&!relSlots())pl.culture+=inc.fa;else pl.faith+=inc.fa;
+ if(pl.rel!=null){const hc=CM.get(G.rels[pl.rel].holy);if(pl.faith>=120&&hc&&hc.own===pl.id){const s=freeSpot(hc,'missionary');if(s!=null){pl.faith-=120;const[x,y]=cr(s);spawn(pl.id,'missionary',x,y).mv=0;if(pl.id===0)note('The faithful sent a missionary from '+hc.name+'.','good')}}}
  if(pl.research&&pl.sci>=TECH[pl.research].cost){pl.sci-=TECH[pl.research].cost;learn(pl,pl.research);pl.research=null}
- for(const u of unitsOf(pl.id)){if(u.work&&--u.work.left<=0){G.tiles[idx(u.c,u.r)].imp=u.work.imp;u.work=null}
+ for(const u of unitsOf(pl.id)){if(u.work&&--u.work.left<=0){const t=G.tiles[idx(u.c,u.r)];if(u.work.imp==='road'){t.road=1;G.roadVer++}else t.imp=u.work.imp;u.work=null}
   if(!u.acted&&u.hp<100){const i=idx(u.c,u.r),o=ownerOf(i);u.hp=Math.min(100,u.hp+(G.tiles[i].city&&o===pl.id?25:o===pl.id?20:10))}}}
 
+/* ================= RELIGION + TRADE ================= */
+const relSlots=()=>Math.max(0,Math.min(RELS.length,G.players.length-1)-G.rels.length);
+const relCost=()=>50+25*G.rels.length;
+const freeBeliefs=()=>Object.keys(BELIEF).filter(b=>!G.rels.some(r=>r.belief===b));
+const canFoundRel=pl=>pl.rel==null&&relSlots()>0&&pl.faith>=relCost()&&!!capOf(pl.id)&&freeBeliefs().length>0;
+function foundReligion(pl,belief){const id=G.rels.length,cap=capOf(pl.id);pl.faith-=relCost();G.rels.push({id,name:RELS[id][0],col:RELS[id][1],owner:pl.id,belief,holy:cap.id});pl.rel=id;cap.rel=id;cap.rp={[id]:120};
+ note(pl.name+' founded '+RELS[id][0]+' in '+cap.name+'.',pl.id===0?'good':'')}
+function addP(c,rel,n){c.rp=c.rp||{};c.rp[rel]=Math.min(400,(c.rp[rel]||0)+n)}
+function checkConv(c){if(!c.rp)return;let best=null,bv=0;for(const k in c.rp)if(c.rp[k]>bv){bv=c.rp[k];best=+k}
+ if(best==null||best===c.rel||bv<15+c.pop*3||(c.rel!=null&&bv<=(c.rp[c.rel]||0)))return;if(c.rel!=null)c.rp[c.rel]=Math.floor((c.rp[c.rel]||0)/2);c.rel=best;
+ if(c.own===0||G.rels[best].owner===0)note(c.name+' now follows '+G.rels[best].name+'.',G.rels[best].owner===0?'good':'')}
+function worldStep(){for(const c of G.cities){if(c.rel==null)continue;const hol=G.rels[c.rel].holy===c.id;addP(c,c.rel,hol?6:2);for(const o of G.cities)if(o!==c&&dist(c.c,c.r,o.c,o.r)<=9)addP(o,c.rel,hol?3:1)}
+ for(const rt of G.routes){const a=CM.get(rt.a),b=CM.get(rt.b);if(!a||!b)continue;if(a.rel!=null)addP(b,a.rel,2);if(b.rel!=null)addP(a,b.rel,2)}
+ for(const c of G.cities)checkConv(c);
+ G.routes=G.routes.filter(r=>{const a=CM.get(r.a),b=CM.get(r.b),ok=a&&b&&a.own===r.own&&!atWar(r.own,b.own)&&r.until>G.turn;if(!ok&&r.own===0)note('Your trade route '+(a?a.name:'?')+' to '+(b?b.name:'?')+' has ended.');return ok});
+ G.deals=G.deals.filter(d=>{const ok=d.until>G.turn&&!atWar(d.from,d.to)&&G.players[d.from].alive&&G.players[d.to].alive;if(!ok&&(d.from===0||d.to===0))note('The '+RES[d.res].n+' trade deal has ended.');return ok});
+ for(const p of G.players)for(const k in p.ob)if(p.ob[k]<=G.turn){delete p.ob[k];if(p.id===0)note('Open borders with '+G.players[k].name+' expired.')}}
+const routeCap=pl=>2+eraOf(pl);
+const homeOf=u=>{const h=CM.get(u.home);return h&&h.own===u.own?h:capOf(u.own)};
+const routeGold=(pl,a,b)=>2+Math.floor(dist(a.c,a.r,b.c,b.r)/3)+(b.own!==pl.id?2:0)+eraOf(pl);
+function canTrade(u){const pl=G.players[u.own],home=homeOf(u);if(u.type!=='caravan'||!home||G.routes.filter(r=>r.own===u.own).length>=routeCap(pl))return null;
+ return G.cities.find(c=>c.id!==home.id&&dist(c.c,c.r,u.c,u.r)<=1&&!atWar(c.own,u.own)&&!G.routes.some(r=>r.own===u.own&&r.a===home.id&&r.b===c.id))||null}
+function establish(u,c){const pl=G.players[u.own],home=homeOf(u),g=routeGold(pl,home,c);G.routes.push({own:u.own,a:home.id,b:c.id,until:G.turn+30,g});
+ if(u.own===0)note('Trade route opened: '+home.name+' to '+c.name+', +'+g+' gold a turn for 30 turns.','good');else if(c.own===0)note(pl.name+' opened a trade route to '+c.name+' (+1 gold for you).');kill(u)}
+function canSpread(u){const pl=G.players[u.own];if(u.type!=='missionary'||pl.rel==null)return null;return G.cities.find(c=>dist(c.c,c.r,u.c,u.r)<=1&&c.rel!==pl.rel&&!atWar(c.own,u.own))||null}
+function spreadFaith(u,c){addP(c,G.players[u.own].rel,60);checkConv(c);if(u.own===0&&c.rel!==human().rel)note('Your missionary preached in '+c.name+', but it has not converted yet.');kill(u)}
+
 /* ================= MOVEMENT ================= */
-function canEnter(u,i){const t=G.tiles[i],Tt=TERR[t.t];if(Tt.block)return false;if(Tt.water){const pl=G.players[u.own];if(!pl.techs.seafaring)return false;if(t.t==='ocean'&&!pl.techs.navigation)return false}return true}
-const stepCost=i=>{const t=G.tiles[i];return TERR[t.t].water?1:(t.h||t.f?2:1)};
+function canEnter(u,i){const t=G.tiles[i],Tt=TERR[t.t],d=UNITS[u.type],pl=G.players[u.own];if(Tt.block)return false;
+ if(d.naval){if(!Tt.water){const c=cityAtI(i);return!!c&&c.own===u.own}return t.t!=='ocean'||(!!pl.techs.navigation&&!d.coastOnly)}
+ if(Tt.water){if(!pl.techs.seafaring)return false;if(t.t==='ocean'&&!pl.techs.navigation)return false}return true}
+function blocked(u,j){const a=uAt.get(j),b=cAt.get(j);if(UNITS[u.type].str){if(a)return true;return!!b&&b.own!==u.own}if(b)return true;return!!a&&a.own!==u.own}
+function borderBlocked(u,from,to){const o=ownerOf(to);if(o<0||o===u.own)return false;const pl=G.players[u.own];if(pl.barb||pl.war[o]||pl.ob[o])return false;
+ const k=UNITS[u.type].cls;if(k==='caravan'||k==='missionary')return false;return ownerOf(from)!==o}
+function stepCost(j,i){const t=G.tiles[j];if(TERR[t.t].water)return 1;const f=G.tiles[i];if((t.road||t.city)&&(f.road||f.city))return .5;return t.h||t.f?2:1}
 class Heap{constructor(){this.a=[]}get size(){return this.a.length}
  push(v,p){const a=this.a;a.push([p,v]);let i=a.length-1;while(i>0){const k=(i-1)>>1;if(a[k][0]<=a[i][0])break;[a[k],a[i]]=[a[i],a[k]];i=k}}
  pop(){const a=this.a,top=a[0],l=a.pop();if(a.length){a[0]=l;let i=0;for(;;){let m=i;const x=2*i+1,y=x+1;if(x<a.length&&a[x][0]<a[m][0])m=x;if(y<a.length&&a[y][0]<a[m][0])m=y;if(m===i)break;[a[m],a[i]]=[a[i],a[m]];i=m}}return top[1]}}
-function findPath(u,ti){const si=idx(u.c,u.r);if(si===ti)return[];const[tc,tr]=cr(ti),gs=new Map([[si,0]]),from=new Map(),h=new Heap();h.push(si,0);let n=0;
- while(h.size&&n++<5000){const i=h.pop();if(i===ti){const p=[];let k=ti;while(k!==si){p.push(k);k=from.get(k)}return p.reverse()}
+function findPath(u,ti,land){const si=idx(u.c,u.r);if(si===ti)return[];const[tc,tr]=cr(ti),gs=new Map([[si,0]]),from=new Map(),h=new Heap();h.push(si,0);let n=0;
+ while(h.size&&n++<6000){const i=h.pop();if(i===ti){const p=[];let k=ti;while(k!==si){p.push(k);k=from.get(k)}return p.reverse()}
   const g=gs.get(i),wi=isWater(i);
-  for(const j of nbrI(i)){if(j!==ti){if(!canEnter(u,j))continue;const ct=cityAtI(j);if(ct&&ct.own!==u.own)continue}else if(TERR[G.tiles[j].t].block)continue;
-   let c=stepCost(j);if(isWater(j)!==wi)c=3;if(j!==ti&&uAt.has(j))c+=3;const ng=g+c;
-   if(ng<(gs.get(j)??1e9)){gs.set(j,ng);from.set(j,i);const[c2,r2]=cr(j);h.push(j,ng+dist(c2,r2,tc,tr))}}}
+  for(const j of nbrI(i)){if(land&&isWater(j))continue;if(j!==ti){if(!canEnter(u,j))continue;const ct=cityAtI(j);if(ct&&ct.own!==u.own)continue}else if(TERR[G.tiles[j].t].block)continue;
+   if(borderBlocked(u,i,j))continue;let c=stepCost(j,i);if(isWater(j)!==wi)c=3;if(j!==ti&&!land&&blocked(u,j))c+=3;const ng=g+c;
+   if(ng<(gs.get(j)??1e9)){gs.set(j,ng);from.set(j,i);const[c2,r2]=cr(j);h.push(j,ng+dist(c2,r2,tc,tr)*.5)}}}
  return null}
-function place(u,j){uAt.delete(idx(u.c,u.r));[u.c,u.r]=cr(j);uAt.set(j,u);u.fort=false;u.sleep=false;u.acted=true;u.work=null;if(u.own===0)updateVis();dirty=true}
-function stepTo(u,j){if(u.mv<=0||uAt.has(j)||!canEnter(u,j))return false;const ct=cityAtI(j);if(ct&&ct.own!==u.own)return false;
- const tw=isWater(j)!==isWater(idx(u.c,u.r));u.mv=tw?0:Math.max(0,u.mv-stepCost(j));place(u,j);return true}
+function place(u,j){const old=idx(u.c,u.r),m=mapOf(u);if(vis&&(u.own===0||vis[old]||vis[j])){const now=performance.now();if(!(u._t&&now-u._t<240)){u._x=hx(u.c,u.r);u._y=hy(u.r)}u._t=now;animUntil=now+260;
+  if(isWater(old)!==isWater(j)&&!UNITS[u.type].naval)fxs.push({i:isWater(j)?j:old,ring:1,t:now})}
+ if(m.get(old)===u)m.delete(old);[u.c,u.r]=cr(j);m.set(j,u);u.fort=false;u.sleep=false;u.acted=true;u.work=null;if(u.own===0)updateVis();dirty=true}
+function stepTo(u,j){const i=idx(u.c,u.r);if(u.mv<=0||blocked(u,j)||!canEnter(u,j)||borderBlocked(u,i,j))return false;const ct=cityAtI(j);if(ct&&ct.own!==u.own)return false;
+ const tw=isWater(j)!==isWater(i);u.mv=tw?0:Math.max(0,u.mv-stepCost(j,i));place(u,j);return true}
 function goToward(u,ti,stop=0){if(u.mv<=0||distI(idx(u.c,u.r),ti)<=stop)return true;const p=findPath(u,ti);if(!p)return false;
  for(const j of p){if(u.mv<=0||distI(idx(u.c,u.r),ti)<=stop)break;if(!stepTo(u,j))break}return true}
 function follow(u){if(u.goto==null)return;const ti=u.goto;if(!goToward(u,ti)){u.goto=null;return}const i=idx(u.c,u.r);
- if(i===ti||(distI(i,ti)<=1&&(uAt.has(ti)||!canEnter(u,ti)||(cityAtI(ti)&&cityAtI(ti).own!==u.own))))u.goto=null}
+ if(i===ti||(distI(i,ti)<=1&&(blocked(u,ti)||!canEnter(u,ti)||(cityAtI(ti)&&cityAtI(ti).own!==u.own))))u.goto=null}
 function reach(u){const m=new Map(),si=idx(u.c,u.r),h=new Heap();m.set(si,u.mv);h.push(si,-u.mv);
- while(h.size){const i=h.pop(),mv=m.get(i);if(mv<=0)continue;for(const j of nbrI(i)){if(!canEnter(u,j)||uAt.has(j))continue;const ct=cityAtI(j);if(ct&&ct.own!==u.own)continue;
-  const n=isWater(j)!==isWater(i)?0:Math.max(0,mv-stepCost(j));if(!m.has(j)||m.get(j)<n){m.set(j,n);h.push(j,-n)}}}
+ while(h.size){const i=h.pop(),mv=m.get(i);if(mv<=0)continue;for(const j of nbrI(i)){if(!canEnter(u,j)||blocked(u,j)||borderBlocked(u,i,j))continue;const ct=cityAtI(j);if(ct&&ct.own!==u.own)continue;
+  const n=isWater(j)!==isWater(i)?0:Math.max(0,mv-stepCost(j,i));if(!m.has(j)||m.get(j)<n){m.set(j,n);h.push(j,-n)}}}
  m.delete(si);return m}
 
 /* ================= COMBAT ================= */
 function uStr(u,mode,vsCity){const d=UNITS[u.type],pl=G.players[u.own],t=G.tiles[idx(u.c,u.r)];let s=mode==='rng'?d.rs:d.str;
- if(mode==='def'){if(TERR[t.t].water)s=Math.min(s,5);if(t.h||t.f)s*=1.25;if(u.fort)s*=1.25}
+ if(mode==='def'){if(TERR[t.t].water&&!d.naval)s=Math.min(s,5);if(t.h||t.f)s*=1.25;if(u.fort)s*=1.25}
  if(vsCity&&mode==='rng'&&d.cls==='siege')s*=2;if(vsCity&&mode==='atk'&&(d.cls==='mounted'||d.cls==='armor'))s*=.75;
- s*=1+.1*level(u);if(pl.policies.includes('discipline'))s*=1.1;return s*(.5+.5*u.hp/100)}
-const dmg=(a,d)=>Math.max(1,Math.min(100,Math.round(30*Math.exp(.04*(a-d))*R(.8,1.2))));
-function canAttack(u,i){const d=UNITS[u.type];if(u.mv<=0||!d.str||isWater(idx(u.c,u.r)))return false;const ds=distI(idx(u.c,u.r),i);
- if(d.rs)return ds>=1&&ds<=d.rng;return ds===1&&!isWater(i)}
-function enemyAt(i,p){const c=cityAtI(i);if(c&&c.own!==p)return{city:c,own:c.own};const u=uAt.get(i);if(u&&u.own!==p)return{unit:u,own:u.own};return null}
-function attack(a,i){const ad=UNITS[a.type],city=cityAtI(i),du=uAt.get(i),ranged=ad.rs>0,ai=idx(a.c,a.r),an=UNITS[a.type].n;a.mv=0;a.fort=false;a.acted=true;a.goto=null;a.xp+=5;dirty=true;
+ s*=1+.1*level(u);if(pl.policies.includes('discipline'))s*=1.1;if(!pl.barb&&happiness(pl)<=-10)s*=.8;return s*(.5+.5*u.hp/100)}
+const dmgE=(a,d)=>30*Math.exp(.04*(a-d));
+const dmg=(a,d)=>Math.max(1,Math.min(100,Math.round(dmgE(a,d)*R(.8,1.2))));
+function canAttack(u,i){const d=UNITS[u.type],si=idx(u.c,u.r);if(u.mv<=0||!d.str)return false;const ds=distI(si,i);
+ if(d.rs)return ds>=1&&ds<=d.rng&&(d.naval||!isWater(si));if(ds!==1)return false;if(d.naval)return isWater(si)&&(isWater(i)||!!G.tiles[i].city);return!isWater(si)&&!isWater(i)}
+function enemyAt(i,p){const c=cityAtI(i);if(c&&c.own!==p)return{city:c,own:c.own};const u=uAt.get(i)||cAt.get(i);if(u&&u.own!==p)return{unit:u,own:u.own};return null}
+function preview(u,i){const e=enemyAt(i,u.own);if(!e||!canAttack(u,i))return null;const d=UNITS[u.type],rg=d.rs>0;let deal,take=0,nm,hp;
+ if(e.city){const cs=cityStr(e.city);deal=dmgE(uStr(u,rg?'rng':'atk',true),cs);if(!rg)take=dmgE(cs,uStr(u,'atk'));nm=e.city.name;hp=e.city.hp}
+ else{const dd=UNITS[e.unit.type];nm=dd.n;hp=e.unit.hp;if(!dd.str)return{i,txt:'The '+nm+' is defenseless. Attacking captures it.'};const ds=uStr(e.unit,'def');deal=dmgE(uStr(u,rg?'rng':'atk'),ds);if(!rg)take=dmgE(ds,uStr(u,'atk'))}
+ deal=Math.round(Math.min(100,deal));take=Math.round(Math.min(100,take));
+ const v=take>=u.hp?'You would probably die.':deal>=hp?(e.city&&rg?'Wears the city down to its last defenders.':e.city?'Should take the city.':'Likely kill.'):deal>take*1.3?'Favorable.':deal<take*.75?'Risky.':'Even fight.';
+ return{i,txt:`Against ${nm} (HP ${Math.round(hp)}): deal about ${deal}, take about ${take}. ${v}`}}
+function attack(a,i){const ad=UNITS[a.type],city=cityAtI(i),du=uAt.get(i)||cAt.get(i),ranged=ad.rs>0,ai=idx(a.c,a.r),an=ad.n;a.mv=0;a.fort=false;a.acted=true;a.goto=null;a.xp+=5;dirty=true;
  if(city&&city.own!==a.own){const cs=cityStr(city),d=dmg(uStr(a,ranged?'rng':'atk',true),cs);
   if(ranged){city.hp=Math.max(1,city.hp-d);fx(i,-d);return}
   const back=dmg(cs,uStr(a,'atk'));city.hp-=d;a.hp-=back;fx(i,-d);fx(ai,-back);
-  if(city.hp<=0){if(a.hp<=0)a.hp=1;if(G.players[a.own].barb){city.hp=1;const o=G.players[city.own],l=Math.min(o.gold,25);o.gold-=l;if(city.own===0)note('Raiders sacked '+city.name+' and took '+l+' gold.','bad')}else capture(city,a)}
+  if(city.hp<=0){if(a.hp<=0)a.hp=1;if(G.players[a.own].barb){city.hp=1;const o=G.players[city.own],l=Math.min(o.gold,25);o.gold-=l;if(city.own===0)note('Raiders sacked '+city.name+' and took '+Math.floor(l)+' gold.','bad')}else capture(city,a)}
   else if(a.hp<=0){if(a.own===0)note('Your '+an+' fell attacking '+city.name+'.','bad');kill(a)}return}
  if(!du)return;const dd=UNITS[du.type],dn=dd.n;
  if(!dd.str){fx(i,'captured');if(du.own===0)note('Your '+dn+' was captured.','bad');kill(du);if(!ranged&&canEnter(a,i))place(a,i);return}
  const as=uStr(a,ranged?'rng':'atk'),ds=uStr(du,'def'),d=dmg(as,ds);du.hp-=d;du.xp+=3;fx(i,-d);
  if(!ranged){const back=dmg(ds,uStr(a,'atk'));a.hp-=back;fx(ai,-back)}
- if(du.hp<=0){if(a.hp<=0)a.hp=1;if(du.own===0)note('Your '+dn+' was killed by a '+an+'.','bad');if(a.own===0)note('Your '+an+' destroyed a '+dn+'.','good');kill(du);a.xp+=5;if(!ranged&&canEnter(a,i))place(a,i)}
+ if(du.hp<=0){if(a.hp<=0)a.hp=1;if(du.own===0)note('Your '+dn+' was killed by a '+an+'.','bad');if(a.own===0)note('Your '+an+' destroyed a '+dn+'.','good');kill(du);a.xp+=5;
+  if(!ranged&&canEnter(a,i)){const cv2=cAt.get(i);if(cv2&&cv2.own!==a.own)kill(cv2);place(a,i)}}
  else if(a.hp<=0){if(a.own===0)note('Your '+an+' was killed attacking a '+dn+'.','bad');kill(a)}}
-function capture(city,a){const old=city.own,g=uAt.get(idx(city.c,city.r));if(g)kill(g);
+function capture(city,a){const old=city.own,ci=idx(city.c,city.r);for(const m of[uAt,cAt]){const g=m.get(ci);if(g&&g.own!==a.own)kill(g)}
  note(G.players[a.own].name+' captured '+city.name+' from '+G.players[old].name+'.',a.own===0?'good':old===0?'bad':'');
- city.own=a.own;city.pop=Math.max(1,city.pop-1);city.hp=Math.round(cityMaxHp(city)*.4);city.build=null;city.prod=0;if(cityOpen===city.id)cityOpen=null;
- place(a,idx(city.c,city.r));const loot=Math.min(G.players[old].gold,30+city.pop*8);G.players[old].gold-=loot;G.players[a.own].gold+=loot;
+ city.own=a.own;city.pop=Math.max(1,city.pop-1);city.hp=Math.round(cityMaxHp(city)*.4);city.build=null;city.prod=0;if(cityOpen===city.id)cityOpen=null;G.roadVer++;
+ place(a,ci);const loot=Math.min(G.players[old].gold,30+city.pop*8);G.players[old].gold-=loot;G.players[a.own].gold+=loot;
  checkElim(old);checkDomination();miniDirty=true;updateVis()}
 function checkElim(p){const pl=G.players[p];if(pl.barb||!pl.alive)return;if(citiesOf(p).length||unitsOf(p).some(u=>u.type==='settler'))return;
  pl.alive=false;for(const u of unitsOf(p))kill(u);note(pl.name+' has been destroyed.',p===0?'bad':'');if(p===0)G.over={type:'defeat',who:-1}}
-function checkDomination(){const caps=G.cities.filter(c=>c.cap);if(caps.length<2)return;const o=caps[0].own;if(caps.every(c=>c.own===o)&&G.players.filter(p=>!p.barb).length>1)win(G.players[o],'domination')}
+function checkDomination(){const caps=G.cities.filter(c=>c.cap);if(caps.length<2)return;const o=caps[0].own;if(caps.every(c=>c.own===o))win(G.players[o],'domination')}
 function win(pl,type){if(G.over)return;G.over={type,who:pl.id}}
 function score(pl){let s=0;for(const c of citiesOf(pl.id))s+=c.pop*3+5+c.tiles.length*.5+c.b.filter(b=>WON[b]).length*10;return Math.round(s+Object.keys(pl.techs).length*4+pl.policies.length*3)}
 const power=pl=>unitsOf(pl.id).reduce((s,u)=>s+(isMil(u)?Math.max(UNITS[u.type].str,UNITS[u.type].rs)*u.hp/100:0),0)+citiesOf(pl.id).length*5;
@@ -390,91 +462,137 @@ function bestImp(t,pl){if(t.city||TERR[t.t].water||TERR[t.t].block)return null;c
  if(t.res&&RES[t.res].imp&&ok(RES[t.res].imp)&&!(RES[t.res].imp==='farm'&&(t.h||t.f)))return RES[t.res].imp;
  if(t.f)return ok('lumber')?'lumber':null;if(t.h)return ok('mine')?'mine':null;return t.t==='snow'?null:'farm'}
 function canImprove(u){const i=idx(u.c,u.r),t=G.tiles[i];if(ownerOf(i)!==u.own)return null;const m=bestImp(t,G.players[u.own]);return m&&t.imp!==m?m:null}
-function workerAct(u){const m=canImprove(u);if(!m||u.mv<=0)return false;u.work={imp:m,left:hasWonder(u.own,'pyramids')?3:4};u.mv=0;u.goto=null;return true}
-function autoWorker(u){if(u.work||u.mv<=0)return;if(canImprove(u)){workerAct(u);return}const pl=G.players[u.own],si=idx(u.c,u.r);let best=-1,bd=99;
- for(const c of citiesOf(u.own))for(const i of c.tiles){const t=G.tiles[i];if(uAt.has(i)||t.lm!==G.tiles[si].lm)continue;const m=bestImp(t,pl);if(!m||t.imp===m)continue;
+const wTime=u=>hasWonder(u.own,'pyramids')?3:4;
+function workerAct(u){const m=canImprove(u);if(!m||u.mv<=0)return false;u.work={imp:m,left:wTime(u)};u.mv=0;u.goto=null;return true}
+function canRoad(u){const i=idx(u.c,u.r),t=G.tiles[i],o=ownerOf(i);return!isWater(i)&&!t.road&&!t.city&&(o<0||o===u.own)}
+function workerRoad(u){if(!canRoad(u)||u.mv<=0)return false;u.work={imp:'road',left:wTime(u)-1};u.mv=0;u.goto=null;return true}
+function roadGoal(pl){if(pl._rg&&pl._rg.t===G.turn+':'+G.roadVer)return pl._rg.g;let g=-1;const cap=capOf(pl.id);
+ if(cap){const conn=connected(pl.id),lm=G.tiles[idx(cap.c,cap.r)].lm;for(const c of citiesOf(pl.id)){if(conn.has(c.id)||G.tiles[idx(c.c,c.r)].lm!==lm)continue;
+   const p=findPath({own:pl.id,type:'worker',c:cap.c,r:cap.r},idx(c.c,c.r),true);if(!p)continue;const t=p.find(i=>!G.tiles[i].road&&!G.tiles[i].city&&!cAt.has(i));if(t!=null){g=t;break}}}
+ pl._rg={t:G.turn+':'+G.roadVer,g};return g}
+function tryRoad(u){const pl=G.players[u.own];if(canRoad(u)&&idx(u.c,u.r)===roadGoal(pl))return workerRoad(u)||true;const g=roadGoal(pl);if(g<0)return false;
+ if(!goToward(u,g))return false;if(idx(u.c,u.r)===g)workerRoad(u);pl._rg=null;return true}
+function autoWorker(u){if(u.work||u.mv<=0)return;const pl=G.players[u.own],si=idx(u.c,u.r);if(u.id%2===0&&citiesOf(u.own).length>1&&tryRoad(u))return;
+ if(canImprove(u)){workerAct(u);return}let best=-1,bd=99;
+ for(const c of citiesOf(u.own))for(const i of c.tiles){const t=G.tiles[i];if(cAt.has(i)||t.lm!==G.tiles[si].lm)continue;const m=bestImp(t,pl);if(!m||t.imp===m)continue;
   const d=distI(si,i)-(t.res?1.5:0);if(d<bd&&!nbrI(i).some(j=>{const e=uAt.get(j);return e&&atWar(e.own,u.own)})){bd=d;best=i}}
- if(best>=0){goToward(u,best);if(idx(u.c,u.r)===best)workerAct(u)}}
+ if(best>=0){goToward(u,best);if(idx(u.c,u.r)===best)workerAct(u)}else tryRoad(u)}
 
-/* ================= AI ================= */
-function declareWar(a,b){const A=G.players[a],Bp=G.players[b];if(A.war[b])return;A.war[b]=1;Bp.war[a]=1;A.warT[b]=Bp.warT[a]=G.turn;
+/* ================= DIPLOMACY + AI ================= */
+function declareWar(a,b){const A=G.players[a],Bp=G.players[b];if(A.war[b])return;A.war[b]=1;Bp.war[a]=1;A.warT[b]=Bp.warT[a]=G.turn;delete A.ob[b];delete Bp.ob[a];
  if(a===0||b===0||(human().met[a]&&human().met[b]))note(A.name+' declared war on '+Bp.name+'.',b===0?'bad':'');
  for(const u of G.units)if(u.own===a||u.own===b){u.sleep=false}}
 function makePeace(a,b){delete G.players[a].war[b];delete G.players[b].war[a];G.players[a].warT[b]=G.players[b].warT[a]=G.turn;
  if(a===0||b===0||(human().met[a]&&human().met[b]))note(G.players[a].name+' and '+G.players[b].name+' made peace.','good')}
+function attitude(ai,o){let s=(1-ai.aggr)*2;if(ai.ob[o.id])s+=2;s+=G.deals.filter(d=>(d.from===ai.id&&d.to===o.id)||(d.from===o.id&&d.to===ai.id)).length;
+ s+=G.routes.filter(r=>r.own===o.id&&CM.get(r.b)&&CM.get(r.b).own===ai.id).length;if(ai.warT[o.id]&&G.turn-ai.warT[o.id]<30)s-=3;
+ const ca=capOf(ai.id),co=capOf(o.id);if(ca&&co&&ca.rel!=null&&ca.rel===co.rel)s+=1;if(power(o)<power(ai)*.6)s-=1;return s}
+const attName=s=>s>=2?'Friendly':s>=0?'Neutral':s>=-2?'Wary':'Hostile';
+function openBorders(a,b){G.players[a].ob[b]=G.players[b].ob[a]=G.turn+30}
 function aiWantsPeace(ai,o){const wt=G.turn-(ai.warT[o.id]||0);return wt>=8&&(power(ai)<power(o)*1.2||wt>25)}
 function aiDiplomacy(pl){for(const o of G.players){if(o===pl||o.barb||!o.alive)continue;
   if(pl.war[o.id]){const wt=G.turn-(pl.warT[o.id]||0);if(wt>10&&(power(pl)<power(o)*.9||wt>30)&&Math.random()<.15){
     if(o.id===0&&!G.autoplay)asks.push({h:`<h2>${pl.name} offers peace</h2><p>Their envoys propose an end to the war.</p>`,b:[['Refuse',()=>{}],['Accept peace',()=>makePeace(pl.id,0),'primary']]});
     else if(aiWantsPeace(o,pl))makePeace(pl.id,o.id)}}
-  else{const anyWar=Object.keys(pl.war).length>0,since=G.turn-(pl.warT[o.id]||0);if(G.turn<35||anyWar||since<15||(o.id===0&&!o.met[pl.id]))continue;
+  else{const anyWar=Object.keys(pl.war).length>0,since=G.turn-(pl.warT[o.id]||0),att=attitude(pl,o);
+   if(o.id!==0&&!pl.ob[o.id]&&att>=0&&Math.random()<.04)openBorders(pl.id,o.id);
+   if(G.turn<35||anyWar||since<15||(o.id===0&&!o.met[pl.id]))continue;
    const mc=citiesOf(pl.id),oc=citiesOf(o.id);if(!mc.length||!oc.length)continue;let near=99;for(const a of mc)for(const b of oc)near=Math.min(near,dist(a.c,a.r,b.c,b.r));
-   if(near<=14&&power(pl)>power(o)*1.2&&Math.random()<.025*pl.aggr*(G.diff+1))declareWar(pl.id,o.id)}}}
-function findSite(pl,c,r,rad){let best=-1,bs=30;const lm=G.tiles[idx(c,r)].lm;for(const i of within(c,r,rad)){const t=G.tiles[i];if(t.lm!==lm||t.own||uAt.has(i)&&uAt.get(i).own!==pl.id)continue;const[a,b]=cr(i);
+   if(near<=14&&power(pl)>power(o)*1.2&&Math.random()<.025*pl.aggr*(G.diff+1)*(att>=2?.2:att<-2?1.6:1))declareWar(pl.id,o.id)}}}
+function offers(o){const h=human(),r=[],att=attitude(o,h);if(h.war[o.id])return r;
+ if(!h.ob[o.id]&&att>=-1)r.push(['ob',o.id,'Agree to open borders for 30 turns',0]);
+ const mine=luxOf(0),theirs=luxOf(o.id);
+ for(const k in mine.set)if(mine.set[k]>0&&mine.own[k]&&!(theirs.set[k]>0)&&o.gold>=60&&att>-3){r.push(['sellLux',o.id+':'+k,'Sell '+RES[k].n+' for 60 gold'+(mine.set[k]<2?' (your only source, you lose its happiness)':''),0]);break}
+ for(const k in theirs.set)if(theirs.set[k]>1&&theirs.own[k]&&!(mine.set[k]>0)){r.push(['buyLux',o.id+':'+k,'Buy '+RES[k].n+' for 60 gold (+4 happiness, 25 turns)',60]);break}
+ if(G.turn-(o.tt??-99)>=10){const bt=Object.keys(o.techs).filter(t=>!h.techs[t]&&TECH[t].pre.every(p=>h.techs[p])).sort((a,b)=>TECH[a].cost-TECH[b].cost)[0];
+  if(bt&&att>=0){const pr=Math.round(TECH[bt].cost*1.5+30);r.push(['buyTech',o.id+':'+bt,'Buy '+TECH[bt].n+' for '+pr+' gold',pr])}
+  const st=Object.keys(h.techs).filter(t=>!o.techs[t]&&TECH[t].pre.every(p=>o.techs[p])).sort((a,b)=>TECH[b].cost-TECH[a].cost)[0];
+  if(st){const pr=Math.min(Math.floor(o.gold),Math.round(TECH[st].cost*.8));if(pr>0&&pr>=TECH[st].cost*.4)r.push(['sellTech',o.id+':'+st,'Sell '+TECH[st].n+' for '+pr+' gold',0])}}
+ return r}
+function findSite(pl,c,r,rad){let best=-1,bs=30;const lm=G.tiles[idx(c,r)].lm;for(const i of within(c,r,rad)){const t=G.tiles[i];if(t.lm!==lm||t.own||cAt.has(i)&&cAt.get(i).own!==pl.id)continue;const[a,b]=cr(i);
   if(G.cities.some(ct=>dist(ct.c,ct.r,a,b)<4))continue;const s=rawSite(i)-dist(c,r,a,b)*.7;if(s>bs){bs=s;best=i}}return best}
-function bestMil(pl,c,opts,siege){let l=opts.filter(o=>o.k==='u'&&UNITS[o.id].str&&o.id!=='scout'&&(siege||UNITS[o.id].cls!=='siege'));if(!l.length)return null;
+function bestMil(pl,c,opts,siege){let l=opts.filter(o=>o.k==='u'&&UNITS[o.id].str&&!UNITS[o.id].naval&&o.id!=='scout'&&(siege||UNITS[o.id].cls!=='siege'));if(!l.length)return null;
  l.sort((a,b)=>Math.max(UNITS[b.id].str,UNITS[b.id].rs*1.1)-Math.max(UNITS[a.id].str,UNITS[a.id].rs*1.1));return l[Math.random()<.7?0:Math.min(1,l.length-1)]}
-function aiPickBuild(pl,c){const opts=buildOptions(c),us=unitsOf(pl.id),cs=citiesOf(pl.id),mil=us.filter(isMil).length,war=Object.keys(pl.war).length>0;
- const has=id=>opts.find(o=>o.id===id),g=uAt.get(idx(c.c,c.r)),y=cityYields(c);
+function aiPickBuild(pl,c){const opts=buildOptions(c),us=unitsOf(pl.id),cs=citiesOf(pl.id),mil=us.filter(u=>isMil(u)&&!UNITS[u.type].naval).length,war=Object.keys(pl.war).length>0;
+ const has=id=>opts.find(o=>o.id===id),g=uAt.get(idx(c.c,c.r)),y=cityYields(c),hap=happiness(pl),making=id=>cs.some(o=>o.build&&o.build.id===id);
  if(has('ship'))return has('ship');
  if(!(g&&g.own===pl.id&&isMil(g))&&mil<cs.length)return bestMil(pl,c,opts)||opts[0];
- if(has('settler')&&cs.length<7&&!us.some(u=>u.type==='settler')&&!cs.some(o=>o.build&&o.build.id==='settler')&&mil>=cs.length&&findSite(pl,c.c,c.r,9)>=0)return has('settler');
- if(us.filter(u=>u.type==='worker').length<Math.min(cs.length,4)&&!cs.some(o=>o.build&&o.build.id==='worker'))return has('worker');
+ if(hap<1){const hb=opts.filter(o=>o.k==='b'&&BLD[o.id].hap).sort((a,b)=>BLD[a.id].cost-BLD[b.id].cost)[0];if(hb)return hb}
+ if(has('settler')&&hap>=3&&cs.length<7&&!us.some(u=>u.type==='settler')&&!making('settler')&&mil>=cs.length&&findSite(pl,c.c,c.r,9)>=0)return has('settler');
+ if(us.filter(u=>u.type==='worker').length<Math.min(cs.length+1,5)&&!making('worker'))return has('worker');
+ if(has('caravan')&&cs.length>1&&!making('caravan')&&G.routes.filter(r=>r.own===pl.id).length+us.filter(u=>u.type==='caravan').length<routeCap(pl)&&Math.random()<.35)return has('caravan');
+ if(has('missionary')&&!making('missionary')&&us.filter(u=>u.type==='missionary').length<1&&Math.random()<.12)return has('missionary');
+ const ships=opts.filter(o=>o.k==='u'&&UNITS[o.id].naval);if(ships.length&&us.filter(u=>UNITS[u.type].naval).length<Math.min(4,cs.length)&&Math.random()<(war?.25:.1))return pick(ships);
  if(mil<cs.length*(war?3:1.5)+1&&Math.random()<(war?.8:.5))return bestMil(pl,c,opts,war&&Math.random()<.3)||opts[0];
  const ws=opts.filter(o=>o.k==='w'&&WON[o.id].cost<y.p*22);if(ws.length&&Math.random()<.3)return pick(ws);
  const bs=opts.filter(o=>o.k==='b'&&!((o.id==='walls'||o.id==='castle')&&!war)).sort((a,b)=>BLD[a.id].cost-BLD[b.id].cost);if(bs.length)return bs[Math.random()<.75?0:Math.min(1,bs.length-1)];
  return bestMil(pl,c,opts,true)||opts[0]}
-function bestTarget(u){if(u.mv<=0)return null;const d=UNITS[u.type],si=idx(u.c,u.r);if(!d.str||isWater(si))return null;let best=null,bs=0;
+function bestTarget(u){if(u.mv<=0)return null;const d=UNITS[u.type],si=idx(u.c,u.r);if(!d.str)return null;let best=null,bs=0;
  for(const i of within(u.c,u.r,d.rs?d.rng:1)){if(i===si||!canAttack(u,i))continue;const e=enemyAt(i,u.own);if(!e||!atWar(u.own,e.own))continue;let s=0;
-  if(e.city){const cs=cityStr(e.city);if(d.rs)s=e.city.hp>1?20:0;else{const my=uStr(u,'atk',true);if(e.city.hp<=30*Math.exp(.04*(my-cs))*1.1)s=100;else if(my>=cs*.85&&u.hp>50)s=15;else if(G.players[u.own].barb&&u.hp>60)s=5}}
+  if(e.city){const cs=cityStr(e.city);if(d.rs)s=e.city.hp>1?20:0;else{const my=uStr(u,'atk',true);if(e.city.hp<=dmgE(my,cs)*1.1)s=100;else if(my>=cs*.85&&u.hp>50)s=15;else if(G.players[u.own].barb&&u.hp>60)s=5}}
   else{const dd=UNITS[e.unit.type];if(!dd.str)s=40;else{const as=uStr(u,d.rs?'rng':'atk'),ds=uStr(e.unit,'def');s=d.rs?30+(100-e.unit.hp)*.3:(as>=ds*.75||e.unit.hp<35)?25+(as-ds)+(100-e.unit.hp)*.3:0}}
   if(s>bs){bs=s;best=i}}return best}
-function aiMilitary(pl,u){const d=UNITS[u.type];let t=bestTarget(u);if(t!=null){attack(u,t);return}
- if(u.hp<40){u.fort=true;return}const si=idx(u.c,u.r),stop=d.rs?d.rng:1;
+function wander(u,p){const si=idx(u.c,u.r),o=nbrI(si).filter(j=>canEnter(u,j)&&!blocked(u,j)&&!borderBlocked(u,si,j)&&!(G.tiles[j].city&&!UNITS[u.type].naval)&&isWater(j)===isWater(si));if(o.length&&Math.random()<p){stepTo(u,pick(o));return true}return false}
+function aiNaval(pl,u){const d=UNITS[u.type];let t=bestTarget(u);if(t!=null){attack(u,t);return}if(u.hp<40){u.fort=true;return}
+ let goal=-1,gd=9;for(const e of G.units){if(!atWar(e.own,u.own))continue;const ei=idx(e.c,e.r);if(!isWater(ei)&&!d.rs)continue;const dd=dist(u.c,u.r,e.c,e.r);if(dd<gd){gd=dd;goal=ei}}
+ if(goal<0){let cd=16;for(const c of G.cities){if(!pl.war[c.own])continue;const ci=idx(c.c,c.r);if(!nbrI(ci).some(isWater))continue;const dd=dist(u.c,u.r,c.c,c.r);if(dd<cd){cd=dd;goal=ci}}}
+ if(goal>=0&&goToward(u,goal,d.rs?d.rng:1)){t=bestTarget(u);if(t!=null&&!u.dead)attack(u,t);return}
+ if(!wander(u,.5))u.fort=true}
+function aiMilitary(pl,u){const d=UNITS[u.type];if(d.naval){aiNaval(pl,u);return}let t=bestTarget(u);if(t!=null){attack(u,t);return}
+ if(u.hp<40){u.fort=true;return}const stop=d.rs?d.rng:1;
  if(u.gar){const c=CM.get(u.gar);if(c&&c.own===u.own){if(u.c===c.c&&u.r===c.r)u.fort=true;else goToward(u,idx(c.c,c.r));return}u.gar=0}
  let goal=-1,gd=6;for(const e of G.units){if(!atWar(e.own,u.own))continue;const dd=dist(u.c,u.r,e.c,e.r);if(dd<gd&&(!pl.barb||!isWater(idx(e.c,e.r)))){gd=dd;goal=idx(e.c,e.r)}}
  if(goal<0){let cd=pl.barb?7:99;for(const c of G.cities){if(!atWar(c.own,u.own)||(!pl.barb&&G.players[c.own].barb))continue;const dd=dist(u.c,u.r,c.c,c.r);if(dd<cd){cd=dd;goal=idx(c.c,c.r)}}}
  if(goal>=0){goToward(u,goal,stop);t=bestTarget(u);if(t!=null&&!u.dead)attack(u,t);return}
- if(pl.barb||u.type==='scout'){const o=nbrI(si).filter(j=>canEnter(u,j)&&!uAt.has(j)&&!G.tiles[j].city);if(o.length&&Math.random()<.7)stepTo(u,pick(o));return}
+ if(pl.barb||u.type==='scout'){wander(u,.7);return}
  let home=null,hd=99;for(const c of citiesOf(pl.id)){const dd=dist(u.c,u.r,c.c,c.r);if(dd<hd){hd=dd;home=c}}
  if(home&&hd>2)goToward(u,idx(home.c,home.r),2);else u.fort=true}
 function aiUnit(pl,u){if(u.dead||u.mv<=0)return;const d=UNITS[u.type];
- if(u.type==="settler"){if(!citiesOf(pl.id).length&&canFound(u)){foundCity(u);return}if(u.site==null||G.tiles[u.site].own||G.cities.some(c=>distI(idx(c.c,c.r),u.site)<4))u.site=findSite(pl,u.c,u.r,9);
-  if(u.site<0||u.site==null){if(canFound(u))foundCity(u);else if(!citiesOf(pl.id).length){const o=nbrI(idx(u.c,u.r)).filter(j=>canEnter(u,j)&&!uAt.has(j));if(o.length)stepTo(u,pick(o))}u.site=null;return}
-  if(idx(u.c,u.r)===u.site){if(canFound(u))foundCity(u);else u.site=null}else if(!goToward(u,u.site))u.site=null;return}
+ if(u.type==='settler'){if(!citiesOf(pl.id).length&&canFound(u)){foundCity(u);return}
+  if(u.site==null||G.tiles[u.site].own||G.cities.some(c=>distI(idx(c.c,c.r),u.site)<4))u.site=findSite(pl,u.c,u.r,9);
+  if(u.site<0||u.site==null){if(canFound(u))foundCity(u);else wander(u,1);u.site=null;return}
+  if(idx(u.c,u.r)===u.site){if(canFound(u))foundCity(u);else u.site=null}else if(!goToward(u,u.site)){u.site=null;if(canFound(u)&&Math.random()<.3)foundCity(u)}return}
  if(u.type==='worker'){autoWorker(u);return}
+ if(u.type==='caravan'){let c=canTrade(u);if(c){establish(u,c);return}const home=homeOf(u);if(!home||G.routes.filter(r=>r.own===pl.id).length>=routeCap(pl)){kill(u);return}
+  let best=null,bs=0;for(const o of G.cities){if(o.id===home.id||atWar(o.own,pl.id)||dist(home.c,home.r,o.c,o.r)>14||G.tiles[idx(o.c,o.r)].lm!==G.tiles[idx(u.c,u.r)].lm||G.routes.some(r=>r.own===pl.id&&r.a===home.id&&r.b===o.id))continue;
+   const s=routeGold(pl,home,o)-dist(u.c,u.r,o.c,o.r)*.1;if(s>bs){bs=s;best=o}}
+  if(!best||!goToward(u,idx(best.c,best.r),1)){kill(u);return}c=canTrade(u);if(c)establish(u,c);return}
+ if(u.type==='missionary'){let c=canSpread(u);if(c){spreadFaith(u,c);return}let best=null,bd=15;for(const o of G.cities){if(o.rel===pl.rel||atWar(o.own,pl.id))continue;const dd=dist(u.c,u.r,o.c,o.r);if(dd<bd){bd=dd;best=o}}
+  if(!best||!goToward(u,idx(best.c,best.r),1)){kill(u);return}c=canSpread(u);if(c)spreadFaith(u,c);return}
  if(d.up&&ownerOf(idx(u.c,u.r))===pl.id){const c=upgradeCost(u);if(c!=null&&pl.gold>c+60){doUpgrade(u)}}
  aiMilitary(pl,u)}
 function upgradeCost(u){const d=UNITS[u.type],pl=G.players[u.own];if(!d.up||!unitAvail(pl,d.up,playerRes(pl.id)))return null;return Math.round((UNITS[d.up].cost-d.cost)*2+10)}
 function doUpgrade(u){const c=upgradeCost(u),pl=G.players[u.own];if(c==null||pl.gold<c)return;pl.gold-=c;u.type=UNITS[u.type].up;u.mv=0;dirty=true}
 function aiTurn(pl){if(!pl.research){const a=availTechs(pl);if(a.length)pl.research=a.sort((x,y)=>TECH[x].cost*R(.8,1.25)-TECH[y].cost*R(.8,1.25))[0]}
  while(pl.culture>=policyCost(pl)&&availPol(pl).length){pl.culture-=policyCost(pl);pl.policies.push(pick(availPol(pl)))}
+ if(canFoundRel(pl))foundReligion(pl,pick(freeBeliefs()));
  aiDiplomacy(pl);const cs=citiesOf(pl.id);
  for(const c of cs){if(!c.build)c.build=aiPickBuild(pl,c)||null;
   if(c.build&&c.build.k!=='w'&&c.build.k!=='p'){const bc=buyCost(c);if(pl.gold>bc+(Object.keys(pl.war).length?40:180)){pl.gold-=bc;c.prod=itemCost(pl,c.build);complete(c);if(!c.build)c.build=aiPickBuild(pl,c)||null}}
-  if(!unitsOf(pl.id).some(u=>u.gar===c.id)){let b=null,bd=99;for(const u of unitsOf(pl.id))if(isMil(u)&&!u.gar&&UNITS[u.type].cls!=='mounted'){const dd=dist(u.c,u.r,c.c,c.r);if(dd<bd){bd=dd;b=u}}if(b&&bd<8)b.gar=c.id}}
+  if(!unitsOf(pl.id).some(u=>u.gar===c.id)){let b=null,bd=99;for(const u of unitsOf(pl.id))if(isMil(u)&&!u.gar&&UNITS[u.type].cls!=='mounted'&&!UNITS[u.type].naval){const dd=dist(u.c,u.r,c.c,c.r);if(dd<bd){bd=dd;b=u}}if(b&&bd<8)b.gar=c.id}}
  for(const u of unitsOf(pl.id))aiUnit(pl,u)}
 function barbTurn(pl){const era=Math.max(...G.players.filter(p=>!p.barb&&p.alive).map(eraOf)),n=unitsOf(pl.id).length,cap=1+G.players.length;
- if(G.turn>10&&n<cap+2&&Math.random()<.45){for(let k=0;k<40;k++){const i=RI(G.tiles.length),t=G.tiles[i];if(isWater(i)||TERR[t.t].block||t.own||uAt.has(i))continue;const[c,r]=cr(i);
+ if(G.turn>10&&n<cap+2&&Math.random()<.45){for(let k=0;k<40;k++){const i=RI(G.tiles.length),t=G.tiles[i];if(isWater(i)||TERR[t.t].block||t.own||uAt.has(i)||cAt.has(i))continue;const[c,r]=cr(i);
    if(G.units.some(u=>dist(u.c,u.r,c,r)<4)||G.cities.some(ct=>dist(ct.c,ct.r,c,r)<5))continue;
-   spawn(pl.id,[['warrior'],['warrior','archer','spearman'],['swordsman','pikeman'],['musketeer','pikeman'],['rifleman'],['rifleman','infantry']][era].sort(()=>Math.random()-.5)[0],c,r);break}}
+   spawn(pl.id,pick([['warrior'],['warrior','archer','spearman'],['swordsman','pikeman'],['musketeer','pikeman'],['rifleman'],['rifleman','infantry']][era]),c,r);break}}
  for(const u of unitsOf(pl.id))if(!u.dead)aiMilitary(pl,u)}
 const buyCost=c=>Math.max(5,Math.ceil((itemCost(G.players[c.own],c.build)-c.prod)*2.5));
 
 /* ================= TURN FLOW ================= */
 function startTurn(pl){for(const u of unitsOf(pl.id)){u.mv=UNITS[u.type].mv;u.acted=false;u.skip=false}}
-function endTurn(){if(G.over&&!G.cont){showOver();return}const h=human();
+function endTurn(){if(G.over&&!G.cont){showOver();return}const h=human();pv=null;
  if(h.alive)endEconomy(h);
  for(const pl of G.players){if(pl.id===0||!pl.alive)continue;startTurn(pl);if(pl.barb)barbTurn(pl);else{aiTurn(pl);endEconomy(pl)}}
- G.turn++;if(G.turn>MAXT&&!G.over){const best=G.players.filter(p=>!p.barb&&p.alive).sort((a,b)=>score(b)-score(a))[0];win(best,'score')}
+ worldStep();G.turn++;if(G.turn>MAXT&&!G.over){const best=G.players.filter(p=>!p.barb&&p.alive).sort((a,b)=>score(b)-score(a))[0];win(best,'score')}
  if(!h.alive&&!G.over)G.over={type:'defeat',who:-1};
  startTurn(h);for(const u of unitsOf(0)){if(u.goto!=null)follow(u);if(u.auto)autoWorker(u)}
  updateVis();save();miniDirty=true;if(!G.autoplay){if(G.over&&!G.cont)showOver();else{nextAsk();const u=selUnit();if(!u||!needsOrders(u))selectNext(true)}ui()}}
 const needsOrders=u=>u.own===0&&u.mv>0&&!u.fort&&!u.sleep&&u.goto==null&&!u.auto&&!u.work&&!u.skip;
-function selectNext(pan){const l=unitsOf(0).filter(needsOrders);if(!l.length){return false}const cur=l.findIndex(u=>u.id===sel),u=l[(cur+1)%l.length];sel=u.id;reachC=null;if(pan)center(u.c,u.r);dirty=true;return true}
+function selectNext(pan){const l=unitsOf(0).filter(needsOrders);pv=null;if(!l.length)return false;const cur=l.findIndex(u=>u.id===sel),u=l[(cur+1)%l.length];sel=u.id;reachC=null;if(pan)center(u.c,u.r);dirty=true;return true}
 function pending(){const h=human();if(G.over&&!G.cont)return{l:'Results',f:showOver};
  if(!h.research&&availTechs(h).length&&citiesOf(0).length)return{l:'Choose research',f:()=>ACT.tech()};
  if(h.culture>=policyCost(h)&&availPol(h).length)return{l:'Adopt policy',f:()=>ACT.policy()};
+ if(canFoundRel(h))return{l:'Found religion',f:()=>ACT.faith()};
  const c=citiesOf(0).find(c=>!c.build);if(c)return{l:'Choose production',f:()=>{center(c.c,c.r);openCity(c.id)}};
  if(unitsOf(0).some(needsOrders))return{l:'Next unit',f:()=>{selectNext(true);ui()},soft:1};return{l:'End turn',f:endTurn}}
 function updateVis(){if(!G||!vis)return;vis.fill(0);const h=human();const mark=i=>{vis[i]=1;h.seen[i]=1};
@@ -482,19 +600,21 @@ function updateVis(){if(!G||!vis)return;vis.fill(0);const h=human();const mark=i
  for(const c of G.cities)if(c.own===0)for(const i of c.tiles){mark(i);for(const j of nbrI(i))mark(j)}
  for(const u of G.units)if(u.own!==0&&vis[idx(u.c,u.r)])meet(u.own);for(const c of G.cities)if(c.own!==0&&c.tiles.some(i=>vis[i]))meet(c.own);dirty=true;miniDirty=true}
 function meet(p){const h=human(),o=G.players[p];if(o.barb||h.met[p])return;h.met[p]=1;o.met[0]=1;note('You have met the '+o.name+'.')}
-function save(){try{localStorage.setItem('meridian-save',JSON.stringify(G))}catch(e){}}
-function load(data){try{const s=data||JSON.parse(localStorage.getItem('meridian-save'));if(!s||s.v!==1)return false;G=s;rebuild();const c=capOf(0)||unitsOf(0)[0];if(c)center(c.c,c.r);return true}catch(e){return false}}
+const ser=()=>JSON.stringify(G,(k,v)=>k[0]==='_'?undefined:v);
+function save(){try{localStorage.setItem('meridian-save',ser())}catch(e){}}
+function load(data){try{const s=data||JSON.parse(localStorage.getItem('meridian-save'));if(!s||s.v!==2)return false;G=s;rebuild();const c=capOf(0)||unitsOf(0)[0];if(c)center(c.c,c.r);return true}catch(e){return false}}
 
 /* ================= RENDER ================= */
 const cv=$('#map'),ctx=cv.getContext('2d'),mini=$('#mini'),mctx=mini.getContext('2d');
 const hx=(c,r)=>SQ*S0*(c+.5*(r&1)),hy=r=>1.5*S0*r;
-const COR=[...Array(6)].map((_,k)=>{const a=(60*k-90)*Math.PI/180;return[S0*Math.cos(a),S0*Math.sin(a)]});
-const EDGE=[[1,2],[4,5],[0,1],[5,0],[2,3],[3,4]];
+const mk=k=>[...Array(6)].map((_,i)=>{const a=(60*i-90)*Math.PI/180;return[S0*k*Math.cos(a),S0*k*Math.sin(a)]});
+const COR=mk(1),CI=mk(.965),CB=mk(.88),EDGE=[[1,2],[4,5],[0,1],[5,0],[2,3],[3,4]];
 function center(c,r){cam.x=hx(c,r);cam.y=hy(r);dirty=true}
-function hexPath(x,X,Y){x.beginPath();for(let k=0;k<6;k++)x[k?'lineTo':'moveTo'](X+COR[k][0],Y+COR[k][1]);x.closePath()}
+function hexPath(x,X,Y,C=COR){x.beginPath();for(let k=0;k<6;k++)x[k?'lineTo':'moveTo'](X+C[k][0],Y+C[k][1]);x.closePath()}
 function pickHex(px,py){const b=cv.getBoundingClientRect(),wx=(px-b.left-b.width/2)/cam.z+cam.x,wy=(py-b.top-b.height/2)/cam.z+cam.y,r0=Math.round(wy/(1.5*S0));let best=-1,bd=1e9;
  for(let r=r0-1;r<=r0+1;r++){const c0=Math.round(wx/(SQ*S0)-.5*(r&1));for(let c=c0-1;c<=c0+1;c++){if(!inb(c,r))continue;const d=(hx(c,r)-wx)**2+(hy(r)-wy)**2;if(d<bd){bd=d;best=idx(c,r)}}}
  return{i:bd<S0*S0?best:-1,wx,wy}}
+function tri(x,a,b,c,d,e,f){x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.lineTo(e,f);x.closePath();x.fill()}
 function glyph(x,cls,X,Y,s,col){x.strokeStyle=x.fillStyle=col;x.lineWidth=s*.17;x.lineCap='round';x.lineJoin='round';x.beginPath();
  switch(cls){case'melee':x.moveTo(X,Y-s*.62);x.lineTo(X,Y+s*.6);x.moveTo(X-s*.36,Y+s*.22);x.lineTo(X+s*.36,Y+s*.22);break;
  case'ranged':x.arc(X-s*.2,Y,s*.6,-1.15,1.15);x.moveTo(X-s*.55,Y);x.lineTo(X+s*.62,Y);x.moveTo(X+s*.38,Y-s*.2);x.lineTo(X+s*.62,Y);x.lineTo(X+s*.38,Y+s*.2);break;
@@ -504,90 +624,143 @@ function glyph(x,cls,X,Y,s,col){x.strokeStyle=x.fillStyle=col;x.lineWidth=s*.17;
  case'armor':x.rect(X-s*.55,Y-s*.05,s*1.1,s*.42);x.moveTo(X-s*.1,Y-s*.05);x.lineTo(X-s*.1,Y-s*.35);x.lineTo(X+s*.6,Y-s*.35);break;
  case'settler':x.moveTo(X-s*.3,Y+s*.6);x.lineTo(X-s*.3,Y-s*.6);x.lineTo(X+s*.5,Y-s*.3);x.lineTo(X-s*.3,Y);break;
  case'worker':x.moveTo(X,Y+s*.6);x.lineTo(X,Y-s*.25);x.stroke();x.beginPath();x.lineWidth=s*.34;x.lineCap='butt';x.moveTo(X-s*.42,Y-s*.38);x.lineTo(X+s*.42,Y-s*.38);break;
+ case'caravan':x.rect(X-s*.5,Y-s*.45,s,s*.55);x.stroke();x.beginPath();x.arc(X-s*.28,Y+s*.4,s*.17,0,7);x.moveTo(X+s*.45,Y+s*.4);x.arc(X+s*.28,Y+s*.4,s*.17,0,7);x.fill();break;
+ case'missionary':x.arc(X,Y,s*.25,0,7);x.fill();x.beginPath();for(let k=0;k<8;k++){const a=k*Math.PI/4;x.moveTo(X+Math.cos(a)*s*.42,Y+Math.sin(a)*s*.42);x.lineTo(X+Math.cos(a)*s*.68,Y+Math.sin(a)*s*.68)}break;
+ case'ship':case'shipr':x.moveTo(X-s*.65,Y+s*.2);x.lineTo(X+s*.65,Y+s*.2);x.lineTo(X+s*.4,Y+s*.55);x.lineTo(X-s*.4,Y+s*.55);x.closePath();x.fill();x.beginPath();
+  if(cls==='ship'){x.moveTo(X,Y+s*.2);x.lineTo(X,Y-s*.65);x.lineTo(X+s*.5,Y-s*.05);x.lineTo(X,Y-s*.05)}else{x.moveTo(X-s*.25,Y+s*.2);x.lineTo(X-s*.25,Y-s*.6);x.moveTo(X+s*.25,Y+s*.2);x.lineTo(X+s*.25,Y-s*.6);x.moveTo(X-s*.5,Y-s*.25);x.lineTo(X+s*.5,Y-s*.25)}break;
  default:x.moveTo(X,Y-s*.55);x.lineTo(X+s*.45,Y);x.lineTo(X,Y+s*.55);x.lineTo(X-s*.45,Y);x.closePath()}x.stroke()}
+function resIcon(x,k,a,b,col){x.strokeStyle=x.fillStyle=col;x.lineWidth=1.5;x.lineCap='round';x.beginPath();
+ switch(k){case'wheat':x.moveTo(a,b+5);x.lineTo(a,b-5);x.moveTo(a,b+1);x.lineTo(a-4,b-3);x.moveTo(a,b+1);x.lineTo(a+4,b-3);x.stroke();break;
+ case'cattle':x.arc(a,b+1,3.2,0,7);x.fill();x.beginPath();x.moveTo(a-5,b-4);x.lineTo(a-3,b-1);x.moveTo(a+5,b-4);x.lineTo(a+3,b-1);x.stroke();break;
+ case'fish':x.ellipse(a-1,b,4,2.4,0,0,7);x.fill();x.beginPath();x.moveTo(a+2,b);x.lineTo(a+6,b-3);x.lineTo(a+6,b+3);x.closePath();x.fill();break;
+ case'stone':x.moveTo(a-5,b+3);x.lineTo(a-3,b-3);x.lineTo(a+2,b-4);x.lineTo(a+5,b+3);x.closePath();x.fill();break;
+ case'horses':x.lineWidth=2.2;x.arc(a,b-1,3.6,Math.PI*.2,Math.PI*.8,true);x.stroke();break;
+ case'iron':x.moveTo(a-5,b+3);x.lineTo(a-3,b-2);x.lineTo(a+3,b-2);x.lineTo(a+5,b+3);x.closePath();x.fill();break;
+ case'gems':x.moveTo(a,b-5);x.lineTo(a+4.5,b-1);x.lineTo(a,b+5);x.lineTo(a-4.5,b-1);x.closePath();x.fill();break;
+ case'wine':for(const[p,q]of[[-2.4,-2],[2.4,-2],[0,2.2]]){x.moveTo(a+p+2.3,b+q);x.arc(a+p,b+q,2.3,0,7)}x.fill();break;
+ case'spices':x.moveTo(a,b-5);x.quadraticCurveTo(a+6,b,a,b+5);x.quadraticCurveTo(a-6,b,a,b-5);x.fill();break;
+ case'silk':x.ellipse(a,b,4.5,2.8,-.6,0,7);x.stroke();x.beginPath();x.moveTo(a-3,b+2);x.lineTo(a+3,b-2);x.stroke();break;
+ default:x.rect(a-4.5,b-3.5,9,3);x.rect(a-3,b+.5,6,3);x.fill()}}
+function upos(u,now){const i=idx(u.c,u.r),civ=!UNITS[u.type].str,inCity=!!G.tiles[i].city,shared=civ?uAt.has(i):false;let X=hx(u.c,u.r),Y=hy(u.r)-2,rad=14;
+ if(civ){if(shared||inCity){X-=15;Y+=13;rad=9.5}else rad=12.5}else if(inCity){X+=15;Y+=12;rad=10.5}
+ if(u._t&&now-u._t<240){const k=(now-u._t)/240,e=k*(2-k),tx=hx(u.c,u.r),ty=hy(u.r);X+=(u._x-tx)*(1-e);Y+=(u._y-ty)*(1-e)}return{X,Y,rad}}
+function unitShape(x,d,X,Y,r){x.beginPath();if(!d.str)x.arc(X,Y,r,0,7);else if(d.naval){x.moveTo(X-r*1.15,Y-r*.75);x.lineTo(X+r*1.15,Y-r*.75);x.quadraticCurveTo(X+r*1.1,Y+r*.9,X,Y+r*.95);x.quadraticCurveTo(X-r*1.1,Y+r*.9,X-r*1.15,Y-r*.75)}
+ else{x.moveTo(X-r*.92,Y-r*.9);x.lineTo(X+r*.92,Y-r*.9);x.lineTo(X+r*.92,Y+r*.1);x.quadraticCurveTo(X+r*.9,Y+r*.85,X,Y+r*1.15);x.quadraticCurveTo(X-r*.9,Y+r*.85,X-r*.92,Y+r*.1)}x.closePath()}
 function render(){const dpr=Math.min(2,window.devicePixelRatio||1),w=cv.clientWidth,h=cv.clientHeight;if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}
- const x=ctx,z=cam.z;x.setTransform(1,0,0,1,0,0);x.fillStyle='#0a0f14';x.fillRect(0,0,cv.width,cv.height);if(!G)return;
+ const x=ctx,z=cam.z;x.setTransform(1,0,0,1,0,0);x.fillStyle='#090d12';x.fillRect(0,0,cv.width,cv.height);if(!G)return;
  x.setTransform(dpr*z,0,0,dpr*z,dpr*(w/2-cam.x*z),dpr*(h/2-cam.y*z));
  const r0=Math.max(0,Math.floor((cam.y-h/2/z)/(1.5*S0))-1),r1=Math.min(G.H-1,Math.ceil((cam.y+h/2/z)/(1.5*S0))+1),c0=Math.max(0,Math.floor((cam.x-w/2/z)/(SQ*S0))-1),c1=Math.min(G.W-1,Math.ceil((cam.x+w/2/z)/(SQ*S0))+1);
- const seen=human().seen,su=selUnit();labels=[];
- for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r);if(!seen[i])continue;const t=G.tiles[i],X=hx(c,r),Y=hy(r);hexPath(x,X,Y);x.fillStyle=TERR[t.t].col;x.fill();
-  const v=((c*73+r*151)%7)/7;x.fillStyle=v>.5?`rgba(255,255,255,${(v-.5)*.09})`:`rgba(0,0,0,${(.5-v)*.11})`;x.fill();x.strokeStyle='rgba(0,0,0,.13)';x.lineWidth=1;x.stroke();
-  if(t.t==='mountain'){x.fillStyle='#514c47';x.beginPath();x.moveTo(X-22,Y+14);x.lineTo(X-6,Y-16);x.lineTo(X+4,Y+2);x.lineTo(X+11,Y-8);x.lineTo(X+24,Y+14);x.closePath();x.fill();x.fillStyle='#e8ecee';x.beginPath();x.moveTo(X-6,Y-16);x.lineTo(X-11,Y-6);x.lineTo(X-1,Y-7);x.closePath();x.fill()}
-  if(t.h){x.strokeStyle='rgba(60,45,25,.55)';x.lineWidth=2.2;x.beginPath();x.arc(X-9,Y+9,11,Math.PI*1.1,Math.PI*1.9);x.moveTo(X+18,Y+11);x.arc(X+9,Y+11,9,0,Math.PI,true);x.stroke()}
-  if(t.f){x.fillStyle=t.t==='tundra'?'#3f5f4c':'#2f5e2c';for(const[a,b]of[[-11,-2],[2,-10],[11,3]]){x.beginPath();x.moveTo(X+a,Y+b-10);x.lineTo(X+a+7,Y+b+5);x.lineTo(X+a-7,Y+b+5);x.closePath();x.fill()}}
-  if(t.imp&&!t.city){x.strokeStyle='rgba(30,22,10,.75)';x.fillStyle='rgba(30,22,10,.75)';x.lineWidth=1.8;const a=X+12,b=Y+13;x.beginPath();
-   if(t.imp==='farm'){for(let k=-1;k<=1;k++){x.moveTo(a-8,b+k*4);x.lineTo(a+8,b+k*4)}x.stroke()}else if(t.imp==='mine'){x.moveTo(a-7,b+5);x.lineTo(a,b-7);x.lineTo(a+7,b+5);x.closePath();x.fill()}
-   else if(t.imp==='lumber'){x.rect(a-7,b-3,14,6);x.stroke()}else if(t.imp==='pasture'){x.rect(a-8,b-5,16,10);x.moveTo(a,b-5);x.lineTo(a,b+5);x.stroke()}
-   else if(t.imp==='quarry'){x.rect(a-6,b-5,12,10);x.fill()}else{for(const[p,q]of[[-4,-4],[4,-4],[-4,4],[4,4]]){x.moveTo(a+p+2,b+q);x.arc(a+p,b+q,2,0,7)}x.fill()}}
-  if(t.res){const R_=RES[t.res],a=X-14,b=Y+12;x.beginPath();x.arc(a,b,7.5,0,7);x.fillStyle=R_.col;x.fill();x.strokeStyle='rgba(0,0,0,.6)';x.lineWidth=1.2;x.stroke();x.fillStyle=t.res==='horses'||t.res==='iron'||t.res==='wine'?'#fff':'#1a1408';x.font='600 9.5px Barlow,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(R_.l,a,b+.5)}
-  if(!vis[i]){hexPath(x,X,Y);x.fillStyle='rgba(8,12,18,.5)';x.fill()}}
- x.lineCap='round';
+ const seen=human().seen,su=selUnit(),oc=cityOpen&&CM.get(cityOpen),now=performance.now();labels=[];x.lineJoin='round';
+ for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r),X=hx(c,r),Y=hy(r);
+  if(!seen[i]){hexPath(x,X,Y,CI);x.fillStyle='#111922';x.fill();continue}
+  const t=G.tiles[i],Tt=TERR[t.t],v=((c*73+r*151)%7)/7,o=ownerOf(i);hexPath(x,X,Y,CI);x.fillStyle=Tt.col;x.fill();
+  x.fillStyle=v>.5?`rgba(255,255,255,${(v-.5)*.08})`:`rgba(0,0,0,${(.5-v)*.1})`;x.fill();
+  if(o>=0){x.globalAlpha=.1;x.fillStyle=G.players[o].color;x.fill();x.globalAlpha=1}
+  x.lineWidth=2.2;x.lineCap='round';x.strokeStyle='rgba(255,255,255,.2)';x.beginPath();x.moveTo(X+CB[4][0],Y+CB[4][1]);x.lineTo(X+CB[5][0],Y+CB[5][1]);x.lineTo(X+CB[0][0],Y+CB[0][1]);x.lineTo(X+CB[1][0],Y+CB[1][1]);x.stroke();
+  x.strokeStyle='rgba(0,0,0,.2)';x.beginPath();x.moveTo(X+CB[1][0],Y+CB[1][1]);x.lineTo(X+CB[2][0],Y+CB[2][1]);x.lineTo(X+CB[3][0],Y+CB[3][1]);x.lineTo(X+CB[4][0],Y+CB[4][1]);x.stroke();
+  if(Tt.water||t.t==='desert'){const ox=(v-.5)*12;x.strokeStyle=Tt.water?'rgba(255,255,255,.2)':'rgba(120,88,36,.35)';x.lineWidth=1.7;x.beginPath();x.moveTo(X-13+ox,Y-6);x.quadraticCurveTo(X-8+ox,Y-11,X-3+ox,Y-6);x.quadraticCurveTo(X+2+ox,Y-1,X+7+ox,Y-6);x.moveTo(X-6-ox,Y+9);x.quadraticCurveTo(X-1-ox,Y+4,X+4-ox,Y+9);x.stroke()}
+  if(t.t==='mountain'){x.fillStyle='#5d564f';tri(x,X-25,Y+15,X-7,Y-19,X+9,Y+15);x.fillStyle='#4b4540';tri(x,X-3,Y+15,X+12,Y-9,X+26,Y+15);x.fillStyle='rgba(0,0,0,.2)';tri(x,X-7,Y-19,X+9,Y+15,X-5,Y+15);x.fillStyle='#f1f4f5';tri(x,X-7,Y-19,X-12,Y-9,X-2,Y-8);tri(x,X+12,Y-9,X+8,Y-2,X+16,Y-2)}
+  if(t.h){x.fillStyle='rgba(74,50,20,.34)';x.beginPath();x.moveTo(X-23,Y+9);x.quadraticCurveTo(X-11,Y-15,X+1,Y+9);x.closePath();x.fill();x.beginPath();x.moveTo(X-5,Y+11);x.quadraticCurveTo(X+8,Y-9,X+21,Y+11);x.closePath();x.fill();
+   x.strokeStyle='rgba(255,255,255,.28)';x.lineWidth=1.6;x.beginPath();x.moveTo(X-19,Y+2);x.quadraticCurveTo(X-12,Y-9,X-7,Y-3);x.moveTo(X,Y+5);x.quadraticCurveTo(X+7,Y-4,X+12,Y);x.stroke()}
+  if(t.f){const con=t.t==='tundra'||t.t==='snow';for(const[a,b]of[[-12,1],[1,-10],[12,3]]){const A=X+a,Bb=Y+b;if(con){x.fillStyle='#2f5444';tri(x,A,Bb-10,A+7,Bb+5,A-7,Bb+5);x.fillStyle='#3f6b56';tri(x,A,Bb-10,A,Bb+5,A-7,Bb+5)}
+    else{x.fillStyle='#5b3d1e';x.fillRect(A-1.3,Bb+2,2.6,6);x.fillStyle='#2c6a2b';x.beginPath();x.arc(A,Bb-1,6.8,0,7);x.fill();x.fillStyle='#4c9140';x.beginPath();x.arc(A-2,Bb-3,3.2,0,7);x.fill()}}}
+  if(t.imp&&!t.city){const a=X+14,b=Y+13;x.fillStyle='rgba(250,244,225,.9)';x.strokeStyle='rgba(20,14,6,.7)';x.lineWidth=1;x.beginPath();x.rect(a-9,b-7,18,14);x.fill();x.stroke();x.strokeStyle=x.fillStyle='#3a2a12';x.lineWidth=1.7;x.lineCap='butt';x.beginPath();
+   if(t.imp==='farm'){for(let k=-1;k<=1;k++){x.moveTo(a-6,b+k*4);x.lineTo(a+6,b+k*4)}x.stroke()}else if(t.imp==='mine'){x.moveTo(a-6,b+5);x.lineTo(a-6,b-1);x.arc(a,b-1,6,Math.PI,0);x.lineTo(a+6,b+5);x.closePath();x.fill()}
+   else if(t.imp==='lumber'){x.arc(a,b,5,0,7);x.stroke();x.beginPath();x.arc(a,b,1.6,0,7);x.fill()}else if(t.imp==='pasture'){x.moveTo(a-7,b-2);x.lineTo(a+7,b-2);x.moveTo(a-7,b+3);x.lineTo(a+7,b+3);for(const k of[-5,0,5]){x.moveTo(a+k,b-5);x.lineTo(a+k,b+5)}x.stroke()}
+   else if(t.imp==='quarry'){x.moveTo(a-7,b+5);x.lineTo(a-7,b-1);x.lineTo(a-2,b-1);x.lineTo(a-2,b-5);x.lineTo(a+7,b-5);x.lineTo(a+7,b+5);x.closePath();x.fill()}else{for(const[p,q]of[[-4,-3],[4,-3],[-4,3],[4,3],[0,0]]){x.moveTo(a+p+1.8,b+q);x.arc(a+p,b+q,1.8,0,7)}x.fill()}}
+  if(t.res){const R_=RES[t.res],a=X-15,b=Y+13;x.beginPath();x.arc(a,b,9,0,7);x.fillStyle=R_.col;x.fill();x.strokeStyle='#fbf7ea';x.lineWidth=1.8;x.stroke();resIcon(x,t.res,a,b,R_.dk?'#fff':'#1d1508')}
+  if(!vis[i]){hexPath(x,X,Y,CI);x.fillStyle='rgba(9,13,19,.48)';x.fill()}}
+ /* roads */
+ x.lineCap='round';for(const pass of[['#3d2c17',6],['#b08a55',3.2]]){x.strokeStyle=pass[0];x.lineWidth=pass[1];x.beginPath();
+  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r),t=G.tiles[i];if(!seen[i]||!(t.road||t.city))continue;const X=hx(c,r),Y=hy(r);let any=false;
+   for(let d=0;d<6;d++){const n=nb(c,r,d);if(!n)continue;const j=idx(n[0],n[1]),tj=G.tiles[j];if(!(tj.road||tj.city)||!seen[j])continue;any=true;if(j>i){x.moveTo(X,Y);x.lineTo(hx(n[0],n[1]),hy(n[1]))}}
+   if(!any&&t.road){x.moveTo(X-5,Y);x.lineTo(X+5,Y)}}x.stroke()}
+ /* borders */
  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r);if(!seen[i])continue;const o=ownerOf(i);if(o<0)continue;const X=hx(c,r),Y=hy(r);
-  for(let d=0;d<6;d++){const n=nb(c,r,d);if(n&&ownerOf(idx(n[0],n[1]))===o)continue;const[a,b]=EDGE[d];x.strokeStyle=G.players[o].color;x.lineWidth=3.2;x.beginPath();x.moveTo(X+COR[a][0]*.93,Y+COR[a][1]*.93);x.lineTo(X+COR[b][0]*.93,Y+COR[b][1]*.93);x.stroke()}}
+  for(let d=0;d<6;d++){const n=nb(c,r,d);if(n&&ownerOf(idx(n[0],n[1]))===o)continue;const[a,b]=EDGE[d];for(const[col,lw]of[['rgba(0,0,0,.45)',5.5],[G.players[o].color,3.4]]){x.strokeStyle=col;x.lineWidth=lw;x.beginPath();x.moveTo(X+COR[a][0]*.9,Y+COR[a][1]*.9);x.lineTo(X+COR[b][0]*.9,Y+COR[b][1]*.9);x.stroke()}}}
+ /* trade routes */
+ x.setLineDash([3,7]);x.lineWidth=2.6;for(const rt of G.routes){const a=CM.get(rt.a),b=CM.get(rt.b);if(!a||!b||!seen[idx(a.c,a.r)]||!seen[idx(b.c,b.r)])continue;x.strokeStyle=rt.own===0?'#ffd978':'rgba(255,240,200,.55)';x.lineDashOffset=-now/90;x.beginPath();x.moveTo(hx(a.c,a.r),hy(a.r));x.lineTo(hx(b.c,b.r),hy(b.r));x.stroke()}x.setLineDash([]);
+ if(oc&&oc.own===0){const y=cityYields(oc),wk=new Set(y.worked);x.font='600 11px Barlow,sans-serif';x.textAlign='center';x.textBaseline='middle';
+  for(const i of oc.tiles){const[c,r]=cr(i);if(i===idx(oc.c,oc.r))continue;const ty=tileYield(i,human()),X=hx(c,r),Y=hy(r)-20;x.fillStyle='rgba(10,14,20,.72)';x.fillRect(X-19,Y-7,38,14);
+   [['#8fd985',ty.f,-12],['#f0a960',ty.p,0],['#ffd978',ty.g,12]].forEach(([col,n,dx])=>{x.fillStyle=col;x.fillText(n,X+dx,Y+.5)});if(wk.has(i)){x.strokeStyle='#fff';x.lineWidth=2;x.strokeRect(X-19,Y-7,38,14)}}}
  if(su&&su.own===0){if(!reachC||reachC.id!==su.id||reachC.k!==su.c+','+su.r+','+su.mv)reachC={id:su.id,k:su.c+','+su.r+','+su.mv,m:reach(su)};
-  for(const i of reachC.m.keys()){const[c,r]=cr(i);hexPath(x,hx(c,r),hy(r));x.fillStyle='rgba(255,255,255,.16)';x.fill()}
-  if(su.mv>0)for(const i of within(su.c,su.r,UNITS[su.type].rng||1)){if(!vis[i]||!canAttack(su,i))continue;const e=enemyAt(i,0);if(!e||(!atWar(0,e.own)))continue;const[c,r]=cr(i);hexPath(x,hx(c,r),hy(r));x.strokeStyle='#ff5a4a';x.lineWidth=3;x.stroke()}
-  if(su.goto!=null){const[c,r]=cr(su.goto);x.strokeStyle='#d6a84c';x.lineWidth=2.5;x.beginPath();x.arc(hx(c,r),hy(r),9,0,7);x.stroke()}}
+  for(const i of reachC.m.keys()){const[c,r]=cr(i);hexPath(x,hx(c,r),hy(r),CB);x.fillStyle='rgba(255,255,255,.2)';x.fill()}
+  if(su.mv>0)for(const i of within(su.c,su.r,UNITS[su.type].rng||1)){if(!vis[i]||!canAttack(su,i))continue;const e=enemyAt(i,0);if(!e||!atWar(0,e.own))continue;const[c,r]=cr(i);hexPath(x,hx(c,r),hy(r),CB);x.strokeStyle='#ff5a4a';x.lineWidth=3.5;x.stroke()}
+  if(su.goto!=null){const[c,r]=cr(su.goto);x.strokeStyle='#ffd978';x.lineWidth=2.5;x.beginPath();x.arc(hx(c,r),hy(r),9,0,7);x.stroke()}}
+ /* cities */
  for(const ct of G.cities){const i=idx(ct.c,ct.r);if(!seen[i]||ct.r<r0-1||ct.r>r1+1)continue;const X=hx(ct.c,ct.r),Y=hy(ct.r),pc=G.players[ct.own].color;
-  x.fillStyle=pc;x.strokeStyle='#f3efe2';x.lineWidth=2;x.beginPath();x.rect(X-15,Y-11,30,24);x.fill();x.stroke();x.fillStyle='rgba(0,0,0,.35)';x.fillRect(X-10,Y-5,7,18);x.fillRect(X+1,Y-1,9,14);
-  x.font='600 12px Barlow,sans-serif';const txt=ct.pop+'  '+ct.name+(ct.cap?' ★':''),tw=x.measureText(txt).width+12,lx=X-tw/2,ly=Y-S0-7;
-  x.fillStyle='rgba(14,20,27,.88)';x.fillRect(lx,ly,tw,17);x.fillStyle=pc;x.fillRect(lx,ly+15,tw,3);x.fillStyle='#f3efe2';x.textAlign='center';x.textBaseline='middle';x.fillText(txt,X,ly+8.5);
+  x.fillStyle='rgba(0,0,0,.35)';x.beginPath();x.arc(X+1.5,Y+3,19,0,7);x.fill();x.fillStyle=pc;x.strokeStyle='#fbf7ea';x.lineWidth=2.4;x.beginPath();x.arc(X,Y,18,0,7);x.fill();x.stroke();
+  x.fillStyle='#fbf7ea';x.fillRect(X-11,Y-3,6,11);x.fillRect(X-4,Y-10,7,18);x.fillRect(X+4,Y-1,7,9);tri(x,X-4,Y-10,X-.5,Y-14,X+3,Y-10);
+  if(ct.b.includes('walls')||ct.b.includes('castle')){x.fillRect(X-14,Y+8,28,3);for(let k=-14;k<14;k+=6)x.fillRect(X+k,Y+5,3,3)}
+  x.font='600 12px Barlow,sans-serif';const nm=ct.name+(ct.cap?' ★':''),tw=x.measureText(nm).width+32+(ct.rel!=null?12:0),lx=X-tw/2,ly=Y-S0-9;
+  x.fillStyle='rgba(0,0,0,.35)';x.fillRect(lx+1.5,ly+2.5,tw,18);x.fillStyle='rgba(16,22,30,.93)';x.fillRect(lx,ly,tw,18);x.fillStyle=pc;x.fillRect(lx,ly,20,18);
+  x.textAlign='center';x.textBaseline='middle';x.fillStyle='#fff';x.fillText(ct.pop,lx+10,ly+9.5);x.textAlign='left';x.fillStyle='#f3efe2';x.fillText(nm,lx+26,ly+9.5);
+  if(ct.rel!=null){x.fillStyle=G.rels[ct.rel].col;x.beginPath();x.arc(lx+tw-9,ly+9,4,0,7);x.fill()}
   const mh=cityMaxHp(ct);if(ct.hp<mh){x.fillStyle='#3a1512';x.fillRect(lx,ly-5,tw,4);x.fillStyle='#e56f62';x.fillRect(lx,ly-5,tw*ct.hp/mh,4)}
-  if(ct.own===0&&ct.build){x.fillStyle='#d6a84c';x.fillRect(lx,ly+18,tw*Math.min(1,ct.prod/itemCost(human(),ct.build)),2)}
-  labels.push({id:ct.id,x:lx,y:ly-5,w:tw,h:26})}
- const now=performance.now();
- for(const u of G.units){const i=idx(u.c,u.r);if(!vis[i]||u.r<r0-1||u.r>r1+1)continue;const inCity=!!G.tiles[i].city,X=hx(u.c,u.r)+(inCity?13:0),Y=hy(u.r)+(inCity?12:-1),rad=inCity?11:14,pl=G.players[u.own];
-  if(u.id===sel){x.strokeStyle='#ffd978';x.lineWidth=3;x.beginPath();x.arc(X,Y,rad+4+Math.sin(now/260)*1.2,0,7);x.stroke()}
-  x.beginPath();x.arc(X,Y,rad,0,7);x.fillStyle=pl.color;x.fill();x.strokeStyle=u.fort?'#f3efe2':'rgba(8,10,12,.85)';x.lineWidth=u.fort?2.4:2;x.stroke();
-  glyph(x,UNITS[u.type].cls,X,Y,rad*.82,pl.barb?'#ff6a55':'#fff');
-  if(u.hp<100){x.fillStyle='#2a0f0d';x.fillRect(X-rad,Y+rad+2,rad*2,3.5);x.fillStyle=u.hp>50?'#86cc7c':u.hp>25?'#e8c14e':'#e56f62';x.fillRect(X-rad,Y+rad+2,rad*2*u.hp/100,3.5)}
-  if(u.own===0&&u.mv<=0){x.beginPath();x.arc(X,Y,rad,0,7);x.fillStyle='rgba(0,0,0,.32)';x.fill()}}
- fxs=fxs.filter(f=>now-f.t<1100);for(const f of fxs){const[c,r]=cr(f.i),k=(now-f.t)/1100;x.globalAlpha=1-k;x.font='600 17px Barlow,sans-serif';x.textAlign='center';x.lineWidth=3;x.strokeStyle='#000';x.strokeText(f.txt,hx(c,r),hy(r)-18-k*22);x.fillStyle=f.col;x.fillText(f.txt,hx(c,r),hy(r)-18-k*22)}x.globalAlpha=1;
+  if(ct.own===0&&ct.build){x.fillStyle='#39424d';x.fillRect(lx,ly+18,tw,3);x.fillStyle='#ffd978';x.fillRect(lx,ly+18,tw*Math.min(1,ct.prod/itemCost(human(),ct.build)),3)}
+  labels.push({id:ct.id,x:lx,y:ly-5,w:tw,h:27})}
+ /* units */
+ for(const u of G.units){const i=idx(u.c,u.r);if(!vis[i]||u.r<r0-1||u.r>r1+1)continue;const d=UNITS[u.type],pl=G.players[u.own],{X,Y,rad}=upos(u,now);
+  if(!d.naval&&isWater(i)){x.fillStyle='#5b3d1e';x.strokeStyle='#2a1a0a';x.lineWidth=1.2;x.beginPath();x.moveTo(X-rad*1.35,Y+rad*.35);x.lineTo(X+rad*1.35,Y+rad*.35);x.lineTo(X+rad*.9,Y+rad*1.35);x.lineTo(X-rad*.9,Y+rad*1.35);x.closePath();x.fill();x.stroke()}
+  if(u.id===sel){x.strokeStyle='#ffd978';x.lineWidth=3;x.beginPath();x.arc(X,Y,rad+5+Math.sin(now/260)*1.3,0,7);x.stroke()}
+  unitShape(x,d,X+1.5,Y+2.5,rad);x.fillStyle='rgba(0,0,0,.4)';x.fill();unitShape(x,d,X,Y,rad);x.fillStyle=pl.color;x.fill();x.strokeStyle=u.fort?'#ffd978':'#fbf7ea';x.lineWidth=u.fort?2.6:1.8;x.stroke();
+  glyph(x,d.cls,X,Y,rad*.78,pl.barb?'#ff6a55':'#fff');
+  if(u.hp<100){x.fillStyle='#2a0f0d';x.fillRect(X-rad,Y+rad+4,rad*2,3.5);x.fillStyle=u.hp>50?'#86cc7c':u.hp>25?'#e8c14e':'#e56f62';x.fillRect(X-rad,Y+rad+4,rad*2*u.hp/100,3.5)}
+  if(u.own===0&&u.mv<=0){unitShape(x,d,X,Y,rad);x.fillStyle='rgba(0,0,0,.34)';x.fill()}}
+ fxs=fxs.filter(f=>now-f.t<1100);for(const f of fxs){const[c,r]=cr(f.i),k=(now-f.t)/1100;x.globalAlpha=1-k;
+  if(f.ring){x.strokeStyle='#dff3ff';x.lineWidth=2.5;for(const q of[0,.3]){const kk=Math.min(1,k*1.6+q);x.beginPath();x.ellipse(hx(c,r),hy(r)+8,8+kk*22,4+kk*10,0,0,7);x.stroke()}continue}
+  x.font='600 17px Barlow,sans-serif';x.textAlign='center';x.lineWidth=3;x.strokeStyle='#000';x.strokeText(f.txt,hx(c,r),hy(r)-18-k*22);x.fillStyle=f.col;x.fillText(f.txt,hx(c,r),hy(r)-18-k*22)}x.globalAlpha=1;
  if(miniDirty)drawMini()}
 function drawMini(){miniDirty=false;const s=Math.max(2,Math.floor(170/G.W));mini.width=Math.ceil((G.W+.5)*s);mini.height=Math.ceil(G.H*s*.87)+1;const seen=human().seen;mctx.fillStyle='#0a0f14';mctx.fillRect(0,0,mini.width,mini.height);
  for(let r=0;r<G.H;r++)for(let c=0;c<G.W;c++){const i=idx(c,r);if(!seen[i])continue;const o=ownerOf(i);mctx.fillStyle=o>=0?G.players[o].color:TERR[G.tiles[i].t].col;mctx.fillRect((c+.5*(r&1))*s,r*s*.87,s,s)}
- const k=s/(SQ*S0),w=cv.clientWidth/cam.z*k,h=cv.clientHeight/cam.z*k*.87/(1.5/SQ)/.87;mctx.strokeStyle='#fff';mctx.lineWidth=1;mctx.strokeRect(cam.x*k-w/2+s/2,cam.y/(1.5*S0)*s*.87-h/2,w,h)}
-function loop(){if(dirty||fxs.length||sel){dirty=false;render()}requestAnimationFrame(loop)}
+ const k=s/(SQ*S0),w=cv.clientWidth/cam.z*k,h=cv.clientHeight/cam.z/(1.5*S0)*s*.87;mctx.strokeStyle='#fff';mctx.lineWidth=1;mctx.strokeRect(cam.x*k-w/2+s/2,cam.y/(1.5*S0)*s*.87-h/2,w,h)}
+function loop(){if(dirty||fxs.length||sel||G.routes.length||performance.now()<animUntil){dirty=false;render()}requestAnimationFrame(loop)}
 
 /* ================= UI ================= */
 const selUnit=()=>sel?G.units.find(u=>u.id===sel):null;
 const esc=s=>String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 function ui(){if(!G)return;const h=human(),inc=income(h),sg=n=>(n>=0?'+':'')+n;
  const rt=h.research?TECH[h.research].n+' · '+Math.max(1,Math.ceil((TECH[h.research].cost-h.sci)/Math.max(1,inc.s)))+' turns':'none';
+ const hp=inc.hap,ht=h.gaT>0?'golden age, '+h.gaT+' turns':hp<=-10?'revolt: production and armies suffer':hp<0?'unhappy: cities grow slowly':'content';
  $('#stats').innerHTML=`<span><b>Turn ${G.turn}</b> · ${yearOf(G.turn)}</span><span><i class="dot" style="background:var(--brass)"></i><b>${Math.floor(h.gold)}</b> gold (${sg(inc.g)})</span>
- <span><i class="dot" style="background:var(--sci)"></i><b>${sg(inc.s)}</b> science · ${esc(rt)}</span><span><i class="dot" style="background:var(--cul)"></i><b>${Math.floor(h.culture)}</b>${availPol(h).length?'/'+policyCost(h):''} culture (${sg(inc.c)})</span>`;
- $('#bTech').classList.toggle('need',!h.research&&availTechs(h).length>0);$('#bPol').classList.toggle('need',h.culture>=policyCost(h)&&availPol(h).length>0);
+ <span><i class="dot" style="background:var(--sci)"></i><b>${sg(inc.s)}</b> science · ${esc(rt)}</span><span><i class="dot" style="background:var(--cul)"></i><b>${Math.floor(h.culture)}</b>${availPol(h).length?'/'+policyCost(h):''} culture (${sg(inc.c)})</span>
+ <span><i class="dot" style="background:${hp<0?'var(--bad)':'var(--good)'}"></i><b>${hp}</b> happiness · ${ht}</span><span><i class="dot" style="background:#f3efe2"></i><b>${Math.floor(h.faith)}</b> faith (${sg(inc.fa)})</span>`;
+ $('#bTech').classList.toggle('need',!h.research&&availTechs(h).length>0);$('#bPol').classList.toggle('need',h.culture>=policyCost(h)&&availPol(h).length>0);$('#bRel').classList.toggle('need',canFoundRel(h));
  const p=pending();$('#bEnd').textContent=p.l;$('#bSub').hidden=!p.soft;
  const u=selUnit(),box=$('#unit');
  if(u&&vis[idx(u.c,u.r)]){const d=UNITS[u.type],mine=u.own===0,b=[];
   if(mine){const can=u.mv>0;if(u.type==='settler')b.push(`<button class="primary" data-act="found" ${can&&canFound(u)?'':'disabled'}>Found city</button>`);
-   if(u.type==='worker'){const m=canImprove(u);b.push(`<button class="primary" data-act="improve" ${can&&m?'':'disabled'}>${m?'Build '+IMP[m].n.toLowerCase():'Nothing to build here'}</button><button data-act="auto">${u.auto?'Stop automating':'Automate'}</button>`)}
+   if(u.type==='worker'){const m=canImprove(u);b.push(`<button class="primary" data-act="improve" ${can&&m?'':'disabled'}>${m?'Build '+IMP[m].n.toLowerCase():'Nothing to improve here'}</button><button data-act="road" ${can&&canRoad(u)?'':'disabled'}>Build road</button><button data-act="auto">${u.auto?'Stop automating':'Automate'}</button>`)}
+   if(u.type==='caravan'){const c=canTrade(u);b.push(`<button class="primary" data-act="trade" ${c?'':'disabled'}>${c?'Open trade route with '+esc(c.name)+' (+'+routeGold(h,homeOf(u),c)+' gold)':G.routes.filter(r=>r.own===0).length>=routeCap(h)?'All '+routeCap(h)+' trade routes in use':'Move next to another city to trade'}</button>`)}
+   if(u.type==='missionary'){const c=canSpread(u);b.push(`<button class="primary" data-act="spread" ${c?'':'disabled'}>${c?'Preach in '+esc(c.name):'Move next to a city of another faith'}</button>`)}
    if(d.str)b.push(`<button data-act="fort" ${can?'':'disabled'}>Fortify</button>`);else b.push(`<button data-act="sleep">Sleep</button>`);
    b.push(`<button data-act="skip">Skip turn</button>`);const uc=upgradeCost(u);if(uc!=null&&ownerOf(idx(u.c,u.r))===0)b.push(`<button data-act="upgrade" ${h.gold>=uc&&can?'':'disabled'}>Upgrade to ${UNITS[d.up].n} (${uc}g)</button>`);
    b.push(`<button class="warn" data-act="disband">Disband</button>`)}
-  const st=u.work?`building ${IMP[u.work.imp].n.toLowerCase()} (${u.work.left})`:u.auto?'automated':u.fort?'fortified':u.sleep?'sleeping':u.goto!=null?'moving':'';
+  const emb=!d.naval&&isWater(idx(u.c,u.r)),st=u.work?`building ${(IMP[u.work.imp]||{n:'road'}).n.toLowerCase()} (${u.work.left})`:u.auto?'automated':u.fort?'fortified':u.sleep?'sleeping':u.goto!=null?'moving':emb?'embarked':'';
   box.innerHTML=`<div class="row"><h3>${d.n}${level(u)?' · rank '+level(u):''}</h3><button data-act="desel" aria-label="Deselect">✕</button></div>
-  <div class="meta">${esc(G.players[u.own].name)} · HP ${Math.round(u.hp)} · ${d.str?'strength '+d.str+(d.rs?' / ranged '+d.rs:'')+' · ':''}moves ${mine?Math.max(0,Math.ceil(u.mv))+'/':''}${d.mv}${st?' · '+st:''}</div><div class="acts">${b.join('')}</div>`;box.hidden=false}
+  <div class="meta">${esc(G.players[u.own].name)} · HP ${Math.round(u.hp)} · ${d.str?'strength '+d.str+(d.rs?' / ranged '+d.rs:'')+' · ':''}moves ${mine?Math.max(0,Math.ceil(u.mv))+'/':''}${d.mv}${st?' · '+st:''}</div>
+  ${pv&&mine?`<div class="pv">${esc(pv.txt)}</div>`:''}<div class="acts">${b.join('')}</div>`;box.hidden=false}
  else box.hidden=true;
  renderCity();dirty=true}
 function openCity(id){cityOpen=id;ui()}
-function renderCity(){const el=$('#city'),c=cityOpen&&CM.get(cityOpen);if(!c||c.own!==0){el.hidden=true;cityOpen=null;return}const pl=human(),y=cityYields(c),need=growNeed(c.pop);
- const gt=y.surplus>0?Math.ceil((need-c.food)/y.surplus)+' turns to grow':y.surplus<0?'starving':'not growing';
+function renderCity(){const el=$('#city'),c=cityOpen&&CM.get(cityOpen);if(!c||c.own!==0){el.hidden=true;cityOpen=null;return}const pl=human(),y=cityYields(c),need=growNeed(c.pop),hap=happiness(pl);
+ const gt=y.surplus>0?Math.ceil((need-c.food)/Math.max(1,hap<0?Math.floor(y.surplus/3):y.surplus))+' turns to grow'+(hap<0?' (slowed by unhappiness)':''):y.surplus<0?'starving':'not growing';
  const cur=c.build?`<div class="row"><b>${itemName(c.build)}</b><span>${Math.floor(c.prod)}/${itemCost(pl,c.build)} · ${Math.max(1,Math.ceil((itemCost(pl,c.build)-c.prod)/Math.max(1,y.p)))} turns</span></div><div class="meter"><i style="width:${Math.min(100,c.prod/itemCost(pl,c.build)*100)}%"></i></div>
   ${c.build.k==='u'||c.build.k==='b'?`<button style="margin-top:6px" data-act="buy" ${pl.gold>=buyCost(c)?'':'disabled'}>Buy now for ${buyCost(c)} gold</button>`:''}`:'<b style="color:var(--brass)">Nothing in production. Pick something below.</b>';
  const opts=buildOptions(c),grp=(k,t)=>{const l=opts.filter(o=>o.k===k);if(!l.length)return'';return`<h4>${t}</h4>`+l.map(o=>{const d=k==='u'?UNITS[o.id]:k==='b'?BLD[o.id]:k==='w'?WON[o.id]:null,cost=itemCost(pl,o),on=c.build&&c.build.k===o.k&&c.build.id===o.id;
    return`<button class="opt${on?' cur':''}" data-act="build" data-arg="${o.k}:${o.id}"><span>${itemName(o)}${k==='p'?' '+(pl.ship+1)+' of 3':''}<small>${k==='u'?uDesc(d):k==='p'?'Complete all three to win':bDesc(d)}</small></span><span class="c">${cost}<small>${Math.max(1,Math.ceil((cost-(on?c.prod:Math.min(c.prod,0)))/Math.max(1,y.p)))} turns</small></span></button>`}).join('')};
+ const rts=G.routes.filter(r=>r.a===c.id||r.b===c.id).map(r=>{const o=CM.get(r.a===c.id?r.b:r.a);return esc(o?o.name:'?')+(r.own===0?' (+'+r.g+' gold, ':' (+1 gold, ')+(r.until-G.turn)+' turns)'}).join(', ');
  el.innerHTML=`<div class="row"><h2>${esc(c.name)}${c.cap?' ★':''}</h2><button data-act="closeCity" aria-label="Close">✕</button></div>
  <div style="color:var(--dim)">Population ${c.pop} · ${gt} · defense ${Math.round(cityStr(c))} · HP ${Math.round(c.hp)}/${cityMaxHp(c)}</div>
  <div class="meter"><i style="width:${Math.min(100,c.food/need*100)}%;background:var(--good)"></i></div>
- <div class="yl"><div><small>Food</small>${y.surplus>=0?'+':''}${y.surplus}</div><div><small>Prod</small>${y.p}</div><div><small>Gold</small>${y.g-y.maint}</div><div><small>Sci</small>${y.s}</div><div><small>Cult</small>${y.c}</div></div>
+ <div class="yl"><div><small>Food</small>${y.surplus>=0?'+':''}${y.surplus}</div><div><small>Prod</small>${y.p}</div><div><small>Gold</small>${y.g-y.maint}</div><div><small>Sci</small>${y.s}</div><div><small>Cult</small>${y.c}</div><div><small>Faith</small>${y.fa}</div></div>
+ <div style="color:var(--dim);margin-top:7px">${c.rel!=null?'Follows '+esc(G.rels[c.rel].name):'No religion'} · ${c.cap?'Capital':y.conn?'Linked to the capital (+'+(2+Math.floor(c.pop/4))+' gold)':'No road or harbor link to the capital'}${rts?'<br>Trade: '+rts:''}</div>
  <h4>Citizens work for</h4><div class="seg">${Object.keys(FOCUS).map(k=>`<button class="${(c.focus||'bal')===k?'on':''}" data-act="focus" data-arg="${k}">${FOCUS[k].n}</button>`).join('')}</div>
  <h4>Producing</h4>${cur}${grp('p','Project')}${grp('u','Units')}${grp('b','Buildings')}${grp('w','Wonders')}
  <h4>Built here</h4><div style="color:var(--dim)">${c.b.length?c.b.map(b=>(BLD[b]||WON[b]).n).join(', '):'Nothing yet'}</div>`;el.hidden=false}
 function modal(html){$('#mbody').innerHTML=html;$('#modal').hidden=false}
-function closeModal(){$('#modal').hidden=true;nextAsk()}
-let askFns=[];
-function nextAsk(){if(!$('#modal').hidden||!asks.length)return;const a=asks.shift();askFns=a.b.map(b=>b[1]);modal(a.h+`<div class="foot">${a.b.map((b,i)=>`<button class="${b[2]||''}" data-act="ask" data-arg="${i}">${b[0]}</button>`).join('')}</div>`)}
+function closeModal(){$('#modal').hidden=true;askFns=[];nextAsk()}
+function nextAsk(){if(!$('#modal').hidden||!asks.length)return;const a=asks.shift();modal(a.h+`<div class="foot">${a.b.map((b,i)=>`<button class="${b[2]||''}" data-act="ask" data-arg="${i}">${b[0]}</button>`).join('')}</div>`);askFns=a.b.map(b=>b[1])}
 function ask(h,b){asks.push({h,b});nextAsk()}
 function unlocks(t){const o=[];for(const k in UNITS)if(UNITS[k].tech===t)o.push(UNITS[k].n);for(const k in BLD)if(BLD[k].tech===t)o.push(BLD[k].n);for(const k in WON)if(WON[k].tech===t)o.push(WON[k].n);for(const k in IMP)if(IMP[k].tech===t)o.push(IMP[k].n);if(TNOTE[t])o.push(TNOTE[t]);return o.join(', ')}
 function showOver(){const o=G.over,pl=o.who>=0?G.players[o.who]:null,me=o.who===0;
@@ -595,7 +768,8 @@ function showOver(){const o=G.over,pl=o.who>=0?G.players[o.who]:null,me=o.who===
  const why={domination:' holds every original capital.',science:' launched the first starship.',score:' leads the world as the age closes in '+yearOf(MAXT)+'.'}[o.type];
  modal(`<h2>${t}</h2><p>${pl?esc(pl.name)+why:'Your last city is gone.'}</p>${scoreTable()}<div class="foot">${human().alive?'<button data-act="cont">Keep playing</button>':''}<button class="primary" data-act="setup">New game</button></div>`)}
 function scoreTable(){const h=human();return`<div class="tw"><table><tr><th>Nation</th><th>Score</th><th>Cities</th><th>Techs</th><th>Status</th></tr>${G.players.filter(p=>!p.barb&&(p.id===0||h.met[p.id])).sort((a,b)=>score(b)-score(a)).map(p=>
- `<tr><td><i class="dot" style="background:${p.color}"></i>${esc(p.name)}${p.id===0?' (you)':''}</td><td>${score(p)}</td><td>${citiesOf(p.id).length}</td><td>${Object.keys(p.techs).length}</td><td>${!p.alive?'Destroyed':p.id===0?'':h.war[p.id]?'<span style="color:var(--bad)">At war</span>':'Peace'}</td></tr>`).join('')}</table></div>`}
+ `<tr><td><i class="dot" style="background:${p.color}"></i>${esc(p.name)}${p.id===0?' (you)':''}</td><td>${score(p)}</td><td>${citiesOf(p.id).length}</td><td>${Object.keys(p.techs).length}</td><td>${!p.alive?'Destroyed':p.id===0?'':h.war[p.id]?'<span style="color:var(--bad)">At war</span>':'Peace'+(h.ob[p.id]?', open borders':'')}</td></tr>`).join('')}</table></div>`}
+const deal=a=>{const[p,k]=a.split(':');return[G.players[+p],k]};
 const ACT={
  end(){pending().f();ui()},forceEnd(){const p=pending();if(p.soft)endTurn();ui()},
  tech(){const h=human(),inc=income(h);let s='<div class="row"><h2>Research</h2><button data-act="close">✕</button></div><p>Pick what your scholars study next. Blue-edged cards are ready to research.</p>';
@@ -605,13 +779,28 @@ const ACT={
  policy(){const h=human(),can=h.culture>=policyCost(h);modal(`<div class="row"><h2>Policies</h2><button data-act="close">✕</button></div><p>${can?'Your culture has matured. Adopt one policy.':'Next policy at '+policyCost(h)+' culture. You have '+Math.floor(h.culture)+'.'}</p><div class="tgrid">${Object.keys(POL).map(p=>{const got=h.policies.includes(p);
   return`<button class="tech ${got?'done':can?'av':''}" ${!got&&can?`data-act="adopt" data-arg="${p}"`:'disabled'}><b>${POL[p].n}</b><small>${got?'Adopted · ':''}${POL[p].d}</small></button>`}).join('')}</div>`)},
  adopt(p){const h=human();if(h.culture<policyCost(h))return;h.culture-=policyCost(h);h.policies.push(p);note('Adopted '+POL[p].n+'.','good');closeModal();ui()},
- diplo(){const h=human(),l=G.players.filter(p=>!p.barb&&p.id!==0&&h.met[p.id]&&p.alive);modal(`<div class="row"><h2>Diplomacy</h2><button data-act="close">✕</button></div>${scoreTable()}
-  ${l.length?l.map(p=>`<div class="row" style="margin-top:8px"><span><i class="dot" style="background:${p.color}"></i>${esc(p.name)} · army ${power(p)>power(h)*1.3?'stronger than yours':power(p)<power(h)*.7?'weaker than yours':'about equal'}</span>${h.war[p.id]?`<button data-act="peace" data-arg="${p.id}">Propose peace</button>`:`<button class="warn" data-act="war" data-arg="${p.id}">Declare war</button>`}</div>`).join(''):'<p>You have not met another nation yet. Explore.</p>'}`)},
+ faith(){const h=human(),can=canFoundRel(h);let s='<div class="row"><h2>Faith</h2><button data-act="close">✕</button></div>';
+  if(h.rel!=null){const r=G.rels[h.rel];s+=`<p>You founded ${esc(r.name)} (${BELIEF[r.belief].n}: ${BELIEF[r.belief].d}). Every 120 faith sends a free missionary from your holy city, and you can train more in cities of your faith. You have ${Math.floor(h.faith)}.</p>`}
+  else if(can)s+=`<p>Your prophets are ready. Choose the belief that defines your religion. Each belief can be taken by only one religion.</p><div class="tgrid">${freeBeliefs().map(b=>`<button class="tech av" data-act="foundRel" data-arg="${b}"><b>${BELIEF[b].n}</b><small>${BELIEF[b].d}</small></button>`).join('')}</div>`
+  else s+=`<p>${relSlots()?'Found a religion at '+relCost()+' faith. You have '+Math.floor(h.faith)+'. Shrines and temples produce faith.':'Every religion the world has room for is founded. Your faith now adds to culture instead.'}</p>`;
+  s+=`<h4>Religions of the world</h4>`+(G.rels.length?`<div class="tw"><table><tr><th>Religion</th><th>Founder</th><th>Belief</th><th>Cities</th></tr>${G.rels.map(r=>`<tr><td><i class="dot" style="background:${r.col}"></i>${esc(r.name)}</td><td>${esc(G.players[r.owner].name)}</td><td>${BELIEF[r.belief].n}</td><td>${G.cities.filter(c=>c.rel===r.id).length}</td></tr>`).join('')}</table></div>`:'<p>None yet.</p>');modal(s)},
+ foundRel(b){const h=human();if(canFoundRel(h))foundReligion(h,b);closeModal();ui()},
+ diplo(){const h=human(),l=G.players.filter(p=>!p.barb&&p.id!==0&&h.met[p.id]&&p.alive);const lx=luxOf(0).set,ll=Object.keys(lx).filter(k=>lx[k]>0).map(k=>RES[k].n).join(', ');
+  modal(`<div class="row"><h2>Diplomacy</h2><button data-act="close">✕</button></div>${scoreTable()}<p>Your luxuries: ${ll||'none'}. Trade routes in use: ${G.routes.filter(r=>r.own===0).length} of ${routeCap(h)}. Foreign land is closed to your armies unless you agree open borders or go to war.</p>
+  ${l.length?l.map(p=>{const at=attitude(p,h),of=offers(p);return`<div class="card"><div class="row"><b><i class="dot" style="background:${p.color}"></i>${esc(p.name)}</b><span style="color:var(--dim)">${h.war[p.id]?'At war':attName(at)} · army ${power(p)>power(h)*1.3?'stronger than yours':power(p)<power(h)*.7?'weaker than yours':'about equal'} · ${Math.floor(p.gold)} gold</span></div>
+   <div class="acts" style="margin-top:6px">${of.map(o=>`<button data-act="${o[0]}" data-arg="${o[1]}" ${h.gold>=o[3]?'':'disabled'}>${o[2]}</button>`).join('')}${h.war[p.id]?`<button data-act="peace" data-arg="${p.id}">Propose peace</button>`:`<button class="warn" data-act="war" data-arg="${p.id}">Declare war</button>`}</div></div>`}).join(''):'<p>You have not met another nation yet. Explore.</p>'}`)},
  war(p){declareWar(0,+p);ACT.diplo();ui()},
  peace(p){const o=G.players[+p];if(aiWantsPeace(o,human())){makePeace(0,o.id)}else note(o.name+' refuses to make peace.','bad');ACT.diplo();ui()},
+ ob(p){openBorders(0,+p);note('Open borders agreed with '+G.players[+p].name+'.','good');ACT.diplo();ui()},
+ sellLux(a){const[o,k]=deal(a);o.gold-=60;human().gold+=60;G.deals.push({res:k,from:0,to:o.id,until:G.turn+25});note('Sold '+RES[k].n+' to '+o.name+' for 60 gold.','good');ACT.diplo();ui()},
+ buyLux(a){const[o,k]=deal(a),h=human();if(h.gold<60)return;h.gold-=60;o.gold+=60;G.deals.push({res:k,from:o.id,to:0,until:G.turn+25});note('Bought '+RES[k].n+' from '+o.name+'.','good');ACT.diplo();ui()},
+ buyTech(a){const[o,k]=deal(a),h=human(),pr=Math.round(TECH[k].cost*1.5+30);if(h.gold<pr)return;h.gold-=pr;o.gold+=pr;o.tt=G.turn;learn(h,k);if(h.research===k)h.research=null;ACT.diplo();ui()},
+ sellTech(a){const[o,k]=deal(a),pr=Math.min(Math.floor(o.gold),Math.round(TECH[k].cost*.8));o.gold-=pr;human().gold+=pr;o.techs[k]=1;if(o.research===k)o.research=null;o.tt=G.turn;note('Sold '+TECH[k].n+' to '+o.name+' for '+pr+' gold.','good');ACT.diplo();ui()},
  menu(){modal(`<div class="row"><h2>Meridian Empires</h2><button data-act="close">✕</button></div>
   <p>Turn ${G.turn} of ${MAXT}. The game saves itself to this browser at the start of every turn.</p>
-  <h4>How to play</h4><p>Click a unit to select it, then click a tile to move or an enemy to attack. Drag to pan, scroll or pinch to zoom. Click a city's name plate to open it. Keys: Enter ends the turn or jumps to the next unit, Space skips, F fortifies, Esc deselects.</p>
+  <h4>How to play</h4><p>Click a unit to select it, then click a tile to move or an enemy to attack. Right-click (or double-tap) a tile to send the selected unit there even when one of your own units stands on it. One military unit and one civilian can share a tile. Drag to pan, scroll or pinch to zoom. Click a city's name plate to open it.</p>
+  <p>Hover an enemy with a unit selected to see the odds. On a touch screen the first tap shows the odds and the second attacks. Keys: Enter ends the turn or jumps to the next unit, Space skips, F fortifies, Esc deselects.</p>
+  <p>Keep happiness at zero or better: luxuries, arenas, temples and theatres raise it, every city costs 3 and every two citizens cost 1. Roads and harbors link cities to your capital for gold. Caravans open trade routes. Shrines and temples make faith for a religion.</p>
   <p>Win by holding every original capital, launching a three-stage starship after Rocketry, or having the top score in ${yearOf(MAXT)}.</p>
   <h4>Chronicle</h4><div style="color:var(--dim);max-height:160px;overflow-y:auto">${G.log.slice().reverse().map(esc).join('<br>')||'Nothing yet.'}</div>
   <div class="foot"><button data-act="setup">New game</button><button class="primary" data-act="close">Back to the map</button></div>`)},
@@ -621,58 +810,65 @@ const ACT={
   <label class="f" for="sAi">Rival nations</label><select id="sAi"><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
   <label class="f" for="sDiff">Difficulty</label><select id="sDiff"><option value="0">Settler: rivals build and research slower</option><option value="1" selected>Captain: even footing</option><option value="2">Warlord: rivals build and research faster</option></select>
   <div class="foot"><button data-act="close">Cancel</button><button class="primary" data-act="start">Start</button></div>`)},
- start(){const o={nation:+$('#sNat').value,size:+$('#sSize').value,ai:+$('#sAi').value,diff:+$('#sDiff').value};$('#modal').hidden=true;asks=[];$('#toasts').innerHTML='';newGame(o);save();ui()},
- cont(){G.cont=true;closeModal();ui()},close(){closeModal()},ask(i){const f=askFns[+i];$('#modal').hidden=true;f&&f();nextAsk();ui()},
+ start(){const o={nation:+$('#sNat').value,size:+$('#sSize').value,ai:+$('#sAi').value,diff:+$('#sDiff').value};$('#modal').hidden=true;asks=[];askFns=[];$('#toasts').innerHTML='';newGame(o);save();ui()},
+ cont(){G.cont=true;closeModal();ui()},close(){closeModal()},
+ ask(i){const fn=askFns[+i];askFns=[];$('#modal').hidden=true;fn&&fn();nextAsk();ui()},
  closeCity(){cityOpen=null;ui()},
  build(a){const c=CM.get(cityOpen),[k,id]=a.split(':');if(!c)return;c.build={k,id};ui()},
  buy(){const c=CM.get(cityOpen),h=human();if(!c||!c.build)return;const bc=buyCost(c);if(h.gold<bc)return;h.gold-=bc;c.prod=itemCost(h,c.build);if(!complete(c)){note('No free tile next to '+c.name+' for the new unit.','bad')}ui()},
  focus(k){const c=CM.get(cityOpen);if(c)c.focus=k;ui()},
  found(){const u=selUnit();if(u&&u.mv>0&&canFound(u)){foundCity(u);selectNext(false)}ui()},
  improve(){const u=selUnit();if(u&&workerAct(u))selectNext(true);ui()},
+ road(){const u=selUnit();if(u&&workerRoad(u))selectNext(true);ui()},
+ trade(){const u=selUnit(),c=u&&canTrade(u);if(c){establish(u,c);selectNext(true)}ui()},
+ spread(){const u=selUnit(),c=u&&canSpread(u);if(c){spreadFaith(u,c);selectNext(true)}ui()},
  auto(){const u=selUnit();if(!u)return;u.auto=!u.auto;if(u.auto){u.goto=null;autoWorker(u);selectNext(true)}ui()},
  fort(){const u=selUnit();if(u){u.fort=true;u.goto=null;selectNext(true)}ui()},sleep(){const u=selUnit();if(u){u.sleep=true;selectNext(true)}ui()},
  skip(){const u=selUnit();if(u){u.skip=true;if(!selectNext(true))sel=null}ui()},
  upgrade(){const u=selUnit();if(u)doUpgrade(u);ui()},
  disband(){const u=selUnit();if(u&&u.own===0)ask(`<h2>Disband this ${UNITS[u.type].n}?</h2><p>The unit is removed for good.</p>`,[['Keep it',()=>{}],['Disband',()=>{kill(u);checkElim(0)},'warn']]);},
- desel(){sel=null;ui()}};
-document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!b.disabled&&G)ACT[b.dataset.act](b.dataset.arg)});
-function tap(px,py){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>wx>=l.x&&wx<=l.x+l.w&&wy>=l.y&&wy<=l.y+l.h);
- if(lb){const c=CM.get(lb.id);if(c.own===0){sel=null;openCity(c.id)}else note(c.name+' · '+G.players[c.own].name+' · population '+c.pop);ui();return}
- if(i<0||!human().seen[i]){sel=null;ui();return}
- const u=selUnit(),mine=u&&u.own===0,here=uAt.get(i),city=cityAtI(i),e=vis[i]?enemyAt(i,0):null;
- if(mine&&e&&canAttack(u,i)){if(atWar(0,e.own)){attack(u,i);if(!selUnit()||selUnit().mv<=0)selectNext(false)}
-  else ask(`<h2>Declare war on the ${esc(G.players[e.own].name)}?</h2><p>Attacking breaks the peace.</p>`,[['Stand down',()=>{}],['Declare war',()=>declareWar(0,e.own),'warn']]);ui();return}
- if(here&&here.own===0&&vis[i]){if(u&&here.id===u.id&&city){sel=null;openCity(city.id)}else{sel=here.id;here.sleep=false;here.fort=false;cityOpen=null}ui();return}
+ desel(){sel=null;pv=null;ui()}};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!b.disabled&&G)ACT[b.dataset.act](b.dataset.arg);else if(e.target.id==='modal'&&!askFns.length)closeModal()});
+function order(u,i){if(!findPath(u,i)){note('No route there. Closed borders, water or mountains block the way.')}else{u.goto=i;u.auto=false;follow(u);if(u.mv<=0||u.goto!=null)selectNext(false)}}
+function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>wx>=l.x&&wx<=l.x+l.w&&wy>=l.y&&wy<=l.y+l.h),now=performance.now();
+ if(lb&&!force){const c=CM.get(lb.id);if(c.own===0){sel=null;pv=null;openCity(c.id)}else note(c.name+' · '+G.players[c.own].name+' · population '+c.pop+(c.rel!=null?' · '+G.rels[c.rel].name:''));ui();return}
+ if(i<0||!human().seen[i]){sel=null;pv=null;ui();return}
+ const dbl=touch&&lastTap&&lastTap.i===i&&now-lastTap.t<450?lastTap.u:null;
+ let u=selUnit();if(dbl){const p=G.units.find(q=>q.id===dbl);if(p&&p.own===0&&idx(p.c,p.r)!==i){sel=p.id;u=p;force=true}}
+ lastTap={i,t:now,u:u&&u.own===0?u.id:null};
+ const mine=u&&u.own===0,city=cityAtI(i),e=vis[i]?enemyAt(i,0):null,own=[uAt.get(i),cAt.get(i)].filter(o=>o&&o.own===0);
+ if(mine&&e&&canAttack(u,i)){if(!atWar(0,e.own))ask(`<h2>Declare war on the ${esc(G.players[e.own].name)}?</h2><p>Attacking breaks the peace and ends your deals with them.</p>`,[['Stand down',()=>{}],['Declare war',()=>declareWar(0,e.own),'warn']]);
+  else if(touch&&!(pv&&pv.i===i)){pv=preview(u,i);note('Tap again to attack.')}else{pv=null;attack(u,i);if(!selUnit()||selUnit().mv<=0)selectNext(false)}ui();return}
+ pv=null;
+ if(own.length&&vis[i]&&!force){const k=own.findIndex(o=>u&&o.id===u.id);if(k>=0&&k===own.length-1&&city&&city.own===0){sel=null;openCity(city.id)}else{const n=own[(k+1)%own.length];sel=n.id;n.sleep=false;n.fort=false;cityOpen=null}ui();return}
  if(!mine&&city&&city.own===0){openCity(city.id);return}
- if(mine&&u.type){if(!findPath(u,i)){note('No route there.')}else{u.goto=i;u.auto=false;follow(u);if(u.mv<=0||u.goto!=null)selectNext(false)}ui();return}
- if(here&&vis[i]){sel=here.id}else{sel=null;cityOpen=null}ui()}
+ if(mine){if(idx(u.c,u.r)!==i)order(u,i);ui();return}
+ const here=uAt.get(i)||cAt.get(i);if(here&&vis[i]){sel=here.id}else{sel=null;cityOpen=null}ui()}
 /* pointer + keys */
-{const P=new Map();let moved=0,pd=0;
+{const P=new Map();let moved=0,pd=0,hov=-1;
  cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);P.set(e.pointerId,[e.clientX,e.clientY]);if(P.size===1)moved=0;else pd=0});
  cv.addEventListener('pointermove',e=>{if(!G)return;const p=P.get(e.pointerId);
-  if(!p){if(e.pointerType==='mouse'){const{i}=pickHex(e.clientX,e.clientY),tp=$('#tip');if(i>=0&&human().seen[i]){const t=G.tiles[i],y=tileYield(i,human()),o=ownerOf(i);
-    tp.textContent=[TERR[t.t].n+(t.h?' hills':'')+(t.f?' forest':''),t.res?RES[t.res].n:'',t.imp?IMP[t.imp].n:'',`${y.f} food ${y.p} prod ${y.g} gold`,o>=0?G.players[o].name:''].filter(Boolean).join(' · ');tp.hidden=false}else tp.hidden=true}return}
+  if(!p){if(e.pointerType==='mouse'){const{i}=pickHex(e.clientX,e.clientY),tp=$('#tip');if(i===hov)return;hov=i;if(i>=0&&human().seen[i]){const t=G.tiles[i],y=tileYield(i,human()),o=ownerOf(i);
+    tp.textContent=[TERR[t.t].n+(t.h?' hills':'')+(t.f?' forest':''),t.res?RES[t.res].n:'',t.imp?IMP[t.imp].n:'',t.road?'Road':'',`${y.f} food ${y.p} prod ${y.g} gold`,o>=0?G.players[o].name:''].filter(Boolean).join(' · ');tp.hidden=false}else tp.hidden=true;
+    const u=selUnit(),np=u&&u.own===0&&i>=0&&vis[i]?preview(u,i):null;if((np&&np.txt)!==(pv&&pv.txt)){pv=np;ui()}}return}
   if(P.size===2){P.set(e.pointerId,[e.clientX,e.clientY]);const[a,b]=[...P.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(pd)cam.z=Math.max(.35,Math.min(2,cam.z*d/pd));pd=d;moved=99;dirty=miniDirty=true;return}
   const dx=e.clientX-p[0],dy=e.clientY-p[1];moved+=Math.abs(dx)+Math.abs(dy);if(moved>8){cam.x-=dx/cam.z;cam.y-=dy/cam.z;dirty=miniDirty=true}P.set(e.pointerId,[e.clientX,e.clientY])});
- const up=e=>{if(!P.has(e.pointerId))return;P.delete(e.pointerId);if(e.type==='pointerup'&&moved<=8&&!P.size&&G)tap(e.clientX,e.clientY)};
+ const up=e=>{if(!P.has(e.pointerId))return;P.delete(e.pointerId);if(e.type==='pointerup'&&moved<=8&&!P.size&&G)tap(e.clientX,e.clientY,e.pointerType!=='mouse',e.button===2)};
  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
  cv.addEventListener('wheel',e=>{e.preventDefault();cam.z=Math.max(.35,Math.min(2,cam.z*(e.deltaY<0?1.12:.89)));dirty=miniDirty=true},{passive:false});
  cv.addEventListener('contextmenu',e=>e.preventDefault());
  mini.addEventListener('click',e=>{const b=mini.getBoundingClientRect(),s=mini.width/(G.W+.5)*(b.width/mini.width);cam.x=(e.clientX-b.left)/s*SQ*S0-SQ*S0/2;cam.y=(e.clientY-b.top)/(s*.87)*1.5*S0;dirty=miniDirty=true});
- addEventListener('keydown',e=>{if(!G||e.target.tagName==='SELECT')return;const k=e.key;if(!$('#modal').hidden){if(k==='Escape'&&!askFns.length)closeModal();if(k==='Escape')askFns=[];return}
+ addEventListener('keydown',e=>{if(!G||e.target.tagName==='SELECT')return;const k=e.key;if(!$('#modal').hidden){if(k==='Escape'&&!askFns.length)closeModal();return}
   const pan={ArrowLeft:[-80,0],ArrowRight:[80,0],ArrowUp:[0,-80],ArrowDown:[0,80],a:[-80,0],d:[80,0],w:[0,-80],s:[0,80]}[k];
   if(pan){cam.x+=pan[0]/cam.z;cam.y+=pan[1]/cam.z;dirty=miniDirty=true}else if(k==='Enter'){e.preventDefault();e.shiftKey?ACT.forceEnd():ACT.end()}else if(k===' '){e.preventDefault();ACT.skip()}
-  else if(k==='f'){const u=selUnit();if(u&&u.own===0&&UNITS[u.type].str)ACT.fort()}else if(k==='n'){selectNext(true);ui()}else if(k==='Escape'){sel=null;cityOpen=null;ui()}});
+  else if(k==='f'){const u=selUnit();if(u&&u.own===0&&UNITS[u.type].str)ACT.fort()}else if(k==='n'){selectNext(true);ui()}else if(k==='Escape'){sel=null;pv=null;cityOpen=null;ui()}});
  addEventListener('resize',()=>{dirty=miniDirty=true})}
-document.addEventListener('click',e=>{if(e.target.id==='modal'&&!askFns.length)closeModal()});
-const _ask=ACT.ask;ACT.ask=i=>{const f=askFns;askFns=[];const fn=f[+i];$('#modal').hidden=true;fn&&fn();nextAsk();ui()};
-const _close=closeModal;
 
 /* ================= BOOT ================= */
 function boot(data){if(!(data&&data.G&&load(data.G))&&!load())newGame({nation:0,size:1,ai:3,diff:1});
  const u=unitsOf(0).find(needsOrders);if(u&&!sel){sel=u.id}ui();requestAnimationFrame(loop);if(G.over&&!G.cont)showOver()}
 window.DBG={get G(){return G},auto(n){G.autoplay=true;for(let k=0;k<n&&!(G.over&&!G.cont);k++){const h=human();if(h.alive){startTurn(h);aiTurn(h)}endTurn()}G.autoplay=false;updateVis();ui()}};
-try{window.claude?.hot?.snapshot(()=>({G:JSON.parse(JSON.stringify(G))}))}catch(e){}
+try{window.claude?.hot?.snapshot(()=>({G:JSON.parse(ser())}))}catch(e){}
 if(window.claude?.hot?.ready)window.claude.hot.ready(boot);else boot(window.claude?.hot?.data??{});
 </script>
 <!--/PAGE-->
