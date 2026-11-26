@@ -174,6 +174,7 @@ button.big small{display:block;font:500 12.5px var(--body);opacity:.8}
   .toast:nth-last-child(n+4){display:none}
   #toasts{max-width:80%}
 }
+.toast.go{pointer-events:auto;cursor:pointer}.toast.go::after{content:' ›';font-weight:800;color:var(--brass)}
 </style>
 
 <div id="app">
@@ -278,7 +279,7 @@ const FOCUS={bal:{n:'Balanced',f:3,p:3,g:1.5},food:{n:'Food',f:5,p:1.5,g:1},prod
 
 /* ================= STATE + HELPERS ================= */
 let G=null,uAt=new Map(),cAt=new Map(),CM=new Map(),vis=null,sel=null,cityOpen=null,cam={x:0,y:0,z:1},fxs=[],labels=[],dirty=true,miniDirty=true,asks=[],askFns=[],reachC=null,pv=null,animUntil=0,connC={},lastTap=null;
-let V={yields:false,res:true,imp:true,feat:true,grid:true,tint:true,pol:false,rel:false,routes:true,confirm:true};try{Object.assign(V,JSON.parse(localStorage.getItem('meridian-view')||'{}'))}catch(e){}
+let V={yields:false,res:true,imp:true,feat:true,grid:true,tint:true,pol:false,rel:false,routes:true,confirm:true,sound:true};try{Object.assign(V,JSON.parse(localStorage.getItem('meridian-view')||'{}'))}catch(e){}
 let info=null,pend=null;
 const RDESC={wheat:'A staple grain that feeds a growing city.',cattle:'Herds that give a city meat and hides.',fish:'Rich fishing waters off the coast.',stone:'Building stone that speeds up construction.',
  horses:'Wild herds your people can tame for mounted troops.',iron:'Ore for blades and armor.',gems:'Precious stones your people prize.',wine:'Vineyards whose vintages keep citizens cheerful.',
@@ -310,7 +311,7 @@ const inArmy=u=>armySize(u)>=4;
 function flank(a,ti){let n=0;for(const j of nbrI(ti)){const o=uAt.get(j);if(o&&o!==a&&o.own===a.own&&isMil(o)&&!embarked(o))n++}return Math.min(3,n)*.1}
 function endForm(pid){for(const u of unitsOf(pid)){u.sup=0;u.rout=0;u.wasArmy=inArmy(u)?1:0}}
 function checkRout(pid){const pl=G.players[pid];if(pl.barb)return;for(const u of unitsOf(pid)){if(!u.wasArmy||u.dead)continue;if(G.units.some(o=>o!==u&&o.own===pid&&isMil(o)&&dist(o.c,o.r,u.c,u.r)<=2))continue;
-  u.wasArmy=0;u.rout=1;u.fort=false;u.drill=false;u.goto=null;if(pid===0)note('Your '+UNITS[u.type].n+' lost its formation and is falling back.','bad');fx(idx(u.c,u.r),'routed','#fff');
+  u.wasArmy=0;u.rout=1;u.fort=false;u.drill=false;u.goto=null;if(pid===0)note('Your '+UNITS[u.type].n+' lost its formation and is falling back.','bad',idx(u.c,u.r));fx(idx(u.c,u.r),'routed','#fff');
   let home=null,hd=99;for(const c of citiesOf(pid)){const d=dist(u.c,u.r,c.c,c.r);if(d<hd){hd=d;home=c}}if(home&&hd>0){u.mv=mvOf(u);goToward(u,idx(home.c,home.r));u.mv=0}}}
 const LAND=['melee','gun','mounted','armor','scout'],SHOOT=['ranged','siege','shipr'];
 const PROMO={shock:{n:'Shock',d:'+15% strength when attacking',max:2,c:[...LAND,'ship']},drill:{n:'Guard',d:'+15% strength when defending',max:2},
@@ -325,9 +326,18 @@ const rngOf=u=>UNITS[u.type].rng+((u.pr&&u.pr.range)||0),mvOf=u=>UNITS[u.type].m
 const promoList=u=>Object.keys(u.pr||{}).map(k=>PROMO[k].n+(u.pr[k]>1?' II':'')).join(', ');
 const yearOf=t=>{const y=-4000+(t-1)*20;return y<0?-y+' BC':(y||1)+' AD'};
 function rebuild(){formVer++;uAt=new Map();cAt=new Map();CM=new Map();connC={};for(const u of G.units)mapOf(u).set(idx(u.c,u.r),u);for(const c of G.cities)CM.set(c.id,c);vis=new Uint8Array(G.W*G.H);updateVis()}
-function note(msg,cls=''){if(!G||G.autoplay)return;G.log.push('Turn '+G.turn+': '+msg);if(G.log.length>40)G.log.shift();
- const d=document.createElement('div');d.className='toast '+cls;d.textContent=msg;const box=$('#toasts');box.appendChild(d);while(box.children.length>5)box.firstChild.remove();setTimeout(()=>d.remove(),6000)}
-function fx(i,txt,col){if(!vis||!vis[i])return;fxs.push({i,txt:String(txt),col:col||'#ffd0c8',t:performance.now()});dirty=true}
+function note(msg,cls='',loc){if(!G||G.autoplay)return;G.log.push('Turn '+G.turn+': '+msg);if(G.log.length>40)G.log.shift();
+ const d=document.createElement('div');d.className='toast '+cls;d.textContent=msg;if(loc!=null){d.dataset.loc=loc;d.classList.add('go')}const box=$('#toasts');box.appendChild(d);while(box.children.length>5)box.firstChild.remove();setTimeout(()=>d.remove(),6000)}
+let aClock=0,aStart=0,lastMv=0,AC=null;
+const aNow=()=>aClock||performance.now();
+function tick(){if(aClock)aClock+=aClock-aStart<2600?170:30}
+function sfx(k,when){if(!V.sound||!AC||(G&&G.autoplay))return;try{const S={sel:[660,.05,'sine',.05],move:[330,.06,'triangle',.04],hit:[150,.12,'sawtooth',.06],shot:[520,.07,'square',.03],die:[95,.25,'sawtooth',.07],done:[784,.2,'sine',.06],turn:[523,.14,'sine',.05],promo:[880,.22,'triangle',.06]}[k];if(!S)return;
+  const t0=AC.currentTime+Math.max(0,((when||performance.now())-performance.now())/1000),o=AC.createOscillator(),g=AC.createGain();o.type=S[2];o.frequency.setValueAtTime(S[0],t0);
+  if(k==='die'||k==='hit')o.frequency.exponentialRampToValueAtTime(S[0]*.5,t0+S[1]);if(k==='done'||k==='promo')o.frequency.setValueAtTime(S[0]*1.5,t0+S[1]*.5);
+  g.gain.setValueAtTime(.0001,t0);g.gain.linearRampToValueAtTime(S[3],t0+.012);g.gain.exponentialRampToValueAtTime(.0001,t0+S[1]+.06);o.connect(g);g.connect(AC.destination);o.start(t0);o.stop(t0+S[1]+.1)}catch(e){}}
+function sfxMove(now){if(now-lastMv>120){lastMv=now;sfx('move',now)}}
+addEventListener('pointerdown',()=>{try{if(!AC&&V.sound)AC=new(window.AudioContext||window.webkitAudioContext)();else if(AC&&AC.state==='suspended')AC.resume()}catch(e){}},true);
+function fx(i,txt,col){if(!vis||!vis[i])return;fxs.push({i,txt:String(txt),col:col||'#ffd0c8',t:aNow()});dirty=true}
 
 /* ================= MAP GEN ================= */
 function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -435,7 +445,7 @@ function bDesc(d){const o=[];for(const[k,n]of[['f','food'],['p','production'],['
 function uDesc(d){return d.str?((d.naval?'Ship. ':'')+'Strength '+d.str+(d.rs?', ranged '+d.rs+' at range '+d.rng:'')+', moves '+d.mv+(d.res?', needs '+RES[d.res].n:'')+(d.coastOnly?', coast only':'')):
  d.cls==='settler'?'Founds a city. Costs 1 citizen':d.cls==='caravan'?'Opens a trade route with another city':d.cls==='missionary'?'Spreads your religion to a city':'Improves tiles and builds roads'}
 function spawn(p,type,c,r){const u={id:G.nid++,own:p,type,c,r,hp:100,mv:UNITS[type].mv,xp:0};G.units.push(u);mapOf(u).set(idx(c,r),u);formVer++;return u}
-function kill(u){if(u.dead)return;u.dead=true;formVer++;if(vis&&vis[idx(u.c,u.r)]&&!G.autoplay)fxs.push({poof:1,i:idx(u.c,u.r),t:performance.now()});G.units.splice(G.units.indexOf(u),1);const i=idx(u.c,u.r),m=mapOf(u);if(m.get(i)===u)m.delete(i);if(sel===u.id){sel=null;pv=null}dirty=true}
+function kill(u){if(u.dead)return;u.dead=true;formVer++;if(vis&&vis[idx(u.c,u.r)]&&!G.autoplay){const tk=aNow(),n0=performance.now();fxs.push({poof:1,i:idx(u.c,u.r),t:tk});if(aClock&&tk>n0)fxs.push({ghost:{...u,dead:false},i:idx(u.c,u.r),t:n0,life:tk-n0});if(UNITS[u.type].str)sfx('die',tk)}G.units.splice(G.units.indexOf(u),1);const i=idx(u.c,u.r),m=mapOf(u);if(m.get(i)===u)m.delete(i);if(sel===u.id){sel=null;pv=null}dirty=true}
 function freeSpot(c,type){const d=UNITS[type],i=idx(c.c,c.r);if(d.naval)return nbrI(i).find(j=>isWater(j)&&!uAt.has(j)&&!cAt.has(j));
  if(!(d.str?uAt:cAt).has(i))return i;return nbrI(i).find(j=>!uAt.has(j)&&!cAt.has(j)&&!isWater(j)&&!TERR[G.tiles[j].t].block&&!G.tiles[j].city)}
 function learn(pl,t){pl.techs[t]=1;if(pl.id===0)note('Discovered '+TECH[t].n+'.','good')}
@@ -448,7 +458,7 @@ function complete(c){const pl=G.players[c.own],b=c.build,cost=itemCost(pl,b);
   for(const o of G.cities)if(o!==c&&o.build&&o.build.k==='w'&&o.build.id===b.id)o.build=null}
  else if(b.k==='x'){const era=eraOf(pl);for(const net of wallNets(c.own))if(net.big===c)for(const i of net.tiles){const w=G.tiles[i].wall;if(w.lvl<era){w.lvl=era;w.hp=wallMax(era)}}dirty=true}
  else{pl.ship++;note(pl.name+' finished starship stage '+pl.ship+' of 3.',c.own===0?'good':'bad');if(pl.ship>=3)win(pl,'science')}
- c.prod-=cost;if(c.own===0)note(c.name+' completed '+itemName(b)+'.');c.build=null;if(b.k==='p'&&pl.ship<3)c.build=b;return true}
+ c.prod-=cost;if(c.own===0)note(c.name+' completed '+itemName(b)+'.','',idx(c.c,c.r));c.build=null;if(b.k==='p'&&pl.ship<3)c.build=b;return true}
 function claimTile(c){let best=-1,bs=-1e9;for(const i of within(c.c,c.r,3)){const t=G.tiles[i];if(t.own||!nbrI(i).some(j=>G.tiles[j].own===c.id))continue;
   const y=tileYield(i),s=y.f+y.p+y.g+(t.res?3:0)-distI(i,idx(c.c,c.r))*1.5-(t.t==='mountain'?3:0);if(s>bs){bs=s;best=i}}
  if(best<0)return false;G.tiles[best].own=c.id;c.tiles.push(best);return true}
@@ -456,17 +466,17 @@ function foundCity(u){const pl=G.players[u.own],i=idx(u.c,u.r),nat=NATIONS[pl.na
  const c={id:G.nid++,own:u.own,orig:u.own,name:(pl.cn>=nat.cities.length?'New ':'')+nm,c:u.c,r:u.r,pop:1,food:0,prod:0,build:null,b:[],hp:200,cul:0,tiles:[],focus:'bal',cap:pl.cn===0,rel:null,rp:{}};
  pl.cn++;kill(u);G.cities.push(c);if(trait(pl,'steppe'))c.b.push('monument');CM.set(c.id,c);const t=G.tiles[i];t.city=c.id;t.imp=null;t.f=0;if(t.own&&t.own!==c.id){const o=CM.get(t.own);o.tiles.splice(o.tiles.indexOf(i),1)}t.own=c.id;c.tiles.push(i);
  for(const j of nbrI(i))if(!G.tiles[j].own){G.tiles[j].own=c.id;c.tiles.push(j)}
- if(u.own===0){note('Founded '+c.name+'.','good');updateVis();openCity(c.id)}miniDirty=true;return c}
+ if(u.own===0){sfx('done');note('Founded '+c.name+'.','good',i);updateVis();openCity(c.id)}miniDirty=true;return c}
 function canFound(u){const i=idx(u.c,u.r),t=G.tiles[i];if(isWater(i)||TERR[t.t].block)return false;if(t.own&&CM.get(t.own).own!==u.own)return false;return!G.cities.some(c=>dist(c.c,c.r,u.c,u.r)<3)}
 function endEconomy(pl){if(pl.barb)return;const inc=income(pl),hap=inc.hap,mul=pl.id===0?1:[.85,1,1.25][G.diff];
  if(pl.gaT>0)pl.gaT--;else if(hap>0){pl.ga+=hap;if(pl.ga>=150+130*pl.gaN){pl.ga=0;pl.gaN++;pl.gaT=8;if(pl.id===0)note('A golden age begins: +20% production and gold for 8 turns.','good')}}
  for(const c of citiesOf(pl.id)){const y=cityYields(c,hap);let sp=y.surplus;if(sp>0&&hap<0)sp=Math.floor(sp/3);c.food+=sp;const need=growNeed(c.pop);
-  if(c.food>=need){c.pop++;c.food=c.b.includes('aqueduct')?Math.round(need*.4):0}else if(c.food<0){if(c.pop>1){c.pop--;if(pl.id===0)note(c.name+' is starving.','bad')}c.food=0}
+  if(c.food>=need){c.pop++;c.food=c.b.includes('aqueduct')?Math.round(need*.4):0}else if(c.food<0){if(c.pop>1){c.pop--;if(pl.id===0)note(c.name+' is starving.','bad',idx(c.c,c.r))}c.food=0}
   if(c.build){c.prod+=y.p*mul*bonusP(pl,c.build);if(c.prod>=itemCost(pl,c.build))complete(c)}else pl.gold+=Math.floor(y.p/2);
   c.cul+=y.c;let guard=0;while(c.cul>=borderCost(c)&&guard++<3){c.cul-=borderCost(c);if(!claimTile(c))break}
   c.hp=Math.min(cityMaxHp(c),c.hp+15);for(const i of c.tiles){const w=G.tiles[i].wall;if(w&&w.hp<wallMax(w.lvl)){w.hp=Math.min(wallMax(w.lvl),w.hp+6);dirty=true}}
   let tg=null,td=9;for(const i of within(c.c,c.r,2)){const e=uAt.get(i);if(e&&atWar(e.own,pl.id)){const d=distI(i,idx(c.c,c.r));if(d<td||(d===td&&e.hp<tg.hp)){td=d;tg=e}}}
-  if(tg){const d=dmg(cityStr(c)*.8,uStr(tg,'def',false,true));const ti=idx(tg.c,tg.r);if(vis&&vis[ti]){fxs.push({proj:'rock',from:idx(c.c,c.r),i:ti,t:performance.now()});tg._h=performance.now()}tg.hp-=d;fx(ti,-d);if(tg.hp<=0){if(tg.own===0)note('Your '+UNITS[tg.type].n+' was destroyed by '+c.name+'.','bad');kill(tg);checkRout(tg.own)}else if(isMil(tg)&&!inArmy(tg))tg.sup=1}}
+  if(tg){const d=dmg(cityStr(c)*.8,uStr(tg,'def',false,true));const ti=idx(tg.c,tg.r);if(vis&&vis[ti]){fxs.push({proj:'rock',from:idx(c.c,c.r),i:ti,t:aNow()});tg._h=aNow()}tg.hp-=d;fx(ti,-d);if(tg.hp<=0){if(tg.own===0)note('Your '+UNITS[tg.type].n+' was destroyed by '+c.name+'.','bad',ti);kill(tg);checkRout(tg.own)}else if(isMil(tg)&&!inArmy(tg))tg.sup=1}}
  pl.gold+=inc.g;let sci=inc.s;if(pl.gold<0){pl.gold=0;sci=Math.floor(sci/2);const us=unitsOf(pl.id);if(us.length>2&&Math.random()<.3){const v=us[us.length-1];if(pl.id===0)note('Unpaid, your '+UNITS[v.type].n+' deserted.','bad');kill(v)}}
  pl.culture+=inc.c;pl.sci+=sci;
  if(pl.rel==null&&!relSlots())pl.culture+=inc.fa;else pl.faith+=inc.fa;
@@ -528,7 +538,7 @@ function findPath(u,ti,land){const si=idx(u.c,u.r);if(si===ti)return[];const[tc,
    if(borderBlocked(u,i,j))continue;let c=stepCost(j,i);if(isWater(j)!==wi)c=3;if(j!==ti&&!land&&blocked(u,j))c+=3;if(!land&&wallBlocks(u,j))c+=10;const ng=g+c;
    if(ng<(gs.get(j)??1e9)){gs.set(j,ng);from.set(j,i);const[c2,r2]=cr(j);h.push(j,ng+dist(c2,r2,tc,tr)*.5)}}}
  return null}
-function place(u,j){const old=idx(u.c,u.r),m=mapOf(u);{const[nc,nr]=cr(j),ddx=hx(nc,nr)-hx(u.c,u.r);if(Math.abs(ddx)>1)u.face=ddx<0?-1:1}if(vis&&(u.own===0||vis[old]||vis[j])){const now=performance.now();if(!(u._t&&now-u._t<300)){u._x=hx(u.c,u.r);u._y=hy(u.r)}u._t=now;animUntil=now+260;
+function place(u,j){const old=idx(u.c,u.r),m=mapOf(u);{const[nc,nr]=cr(j),ddx=hx(nc,nr)-hx(u.c,u.r);if(Math.abs(ddx)>1)u.face=ddx<0?-1:1}if(vis&&(u.own===0||vis[old]||vis[j])){const now=aNow();if(!(u._t&&now-u._t<300)){u._x=hx(u.c,u.r);u._y=hy(u.r)}u._t=now;tick();if(u.own===0||aClock)sfxMove(now);
   if(isWater(old)!==isWater(j)&&!UNITS[u.type].naval)fxs.push({i:isWater(j)?j:old,ring:1,t:now})}
  if(m.get(old)===u)m.delete(old);[u.c,u.r]=cr(j);m.set(j,u);u.fort=false;u.sleep=false;u.acted=true;u.work=null;u.drill=false;formVer++;if(u.own===0)updateVis();dirty=true}
 function stepTo(u,j){const i=idx(u.c,u.r);if(u.mv<=0||blocked(u,j)||!canEnter(u,j)||borderBlocked(u,i,j)||wallBlocks(u,j))return false;const ct=cityAtI(j);if(ct&&ct.own!==u.own)return false;
@@ -565,23 +575,23 @@ function preview(u,i){const e=enemyAt(i,u.own);if(!e||!canAttack(u,i))return nul
  deal=Math.round(Math.min(100,deal));take=Math.round(Math.min(100,take));
  const v=take>=u.hp?'You would probably die.':deal>=hp?(e.city&&rg?'Wears the city down to its last defenders.':e.city?'Should take the city.':e.wall?'Breaches the wall.':'Likely kill.'):deal>take*1.3?'Favorable.':deal<take*.75?'Risky.':'Even fight.';
  return{i,txt:`Against ${nm} (HP ${Math.round(hp)}): deal about ${deal}, take about ${take}. ${v}${fl>1?' Flanking +'+Math.round((fl-1)*100)+'%.':''}${rg&&e.unit&&isMil(e.unit)&&!inArmy(e.unit)?' Suppresses the target.':''}`}}
-function attack(a,i){const ad=UNITS[a.type],city=cityAtI(i),du=uAt.get(i)||cAt.get(i),ranged=ad.rs>0,ai=idx(a.c,a.r),an=ad.n,fl=ranged?1:1+flank(a,i);if(vis&&(vis[ai]||vis[i])){const now=performance.now(),[tc,tr]=cr(i),dx=hx(tc,tr)-hx(a.c,a.r),dy=hy(tr)-hy(a.r),L=Math.hypot(dx,dy)||1;a._a=now;a._ax=ranged?-dx/L*.3:dx/L;a._ay=ranged?-dy/L*.3:dy/L;if(Math.abs(dx)>1)a.face=dx<0?-1:1;if(ranged)fxs.push({proj:ad.cls==='ranged'||a.type==='ballista'?'arrow':a.type==='catapult'?'rock':'ball',from:ai,i,t:now});if(du)du._h=now+(ranged?350:120)}a.mv=0;a.fort=false;a.drill=false;a.acted=true;a.goto=null;a.xp+=5;dirty=true;
+function attack(a,i){const ad=UNITS[a.type],city=cityAtI(i),du=uAt.get(i)||cAt.get(i),ranged=ad.rs>0,ai=idx(a.c,a.r),an=ad.n,fl=ranged?1:1+flank(a,i);if(vis&&(vis[ai]||vis[i])){const now=aNow(),[tc,tr]=cr(i),dx=hx(tc,tr)-hx(a.c,a.r),dy=hy(tr)-hy(a.r),L=Math.hypot(dx,dy)||1;a._a=now;a._ax=ranged?-dx/L*.3:dx/L;a._ay=ranged?-dy/L*.3:dy/L;if(Math.abs(dx)>1)a.face=dx<0?-1:1;if(ranged)fxs.push({proj:ad.cls==='ranged'||a.type==='ballista'?'arrow':a.type==='catapult'?'rock':'ball',from:ai,i,t:now});if(du)du._h=now+(ranged?350:120);tick();sfx(ranged?'shot':'hit',now)}a.mv=0;a.fort=false;a.drill=false;a.acted=true;a.goto=null;a.xp+=5;dirty=true;
  if(city&&city.own!==a.own){const cs=cityStr(city),d=dmg(fl*uStr(a,ranged?'rng':'atk',true),cs);
   if(ranged){city.hp=Math.max(1,city.hp-d);fx(i,-d);return}
   const back=dmg(cs,uStr(a,'atk'));city.hp-=d;a.hp-=back;fx(i,-d);fx(ai,-back);
-  if(city.hp<=0){if(a.hp<=0)a.hp=1;if(G.players[a.own].barb){city.hp=1;const o=G.players[city.own],l=Math.min(o.gold,25);o.gold-=l;if(city.own===0)note('Raiders sacked '+city.name+' and took '+Math.floor(l)+' gold.','bad')}else capture(city,a)}
+  if(city.hp<=0){if(a.hp<=0)a.hp=1;if(G.players[a.own].barb){city.hp=1;const o=G.players[city.own],l=Math.min(o.gold,25);o.gold-=l;if(city.own===0)note('Raiders sacked '+city.name+' and took '+Math.floor(l)+' gold.','bad',i)}else capture(city,a)}
   else if(a.hp<=0){if(a.own===0)note('Your '+an+' fell attacking '+city.name+'.','bad');kill(a)}return}
  if(!du){const t=G.tiles[i],o=ownerOf(i);if(t.wall&&o>=0&&atWar(a.own,o)){const d=Math.max(1,Math.round(dmg(uStr(a,ranged?'rng':'atk',true),wallDef(t.wall.lvl))*(ad.cls==='siege'?1.25:ad.cls==='armor'?1:.5)));t.wall.hp-=d;fx(i,-d,'#e8e8e8');
-   if(t.wall.hp<=0){delete t.wall;if(vis&&vis[i]&&!G.autoplay)fxs.push({poof:1,i,t:performance.now()});if(a.own===0)note('Your '+an+' breached the wall.','good');else if(o===0)note('A '+an+' breached your wall.','bad')}}return}
+   if(t.wall.hp<=0){delete t.wall;if(vis&&vis[i]&&!G.autoplay)fxs.push({poof:1,i,t:aNow()});if(a.own===0)note('Your '+an+' breached the wall.','good');else if(o===0)note('A '+an+' breached your wall.','bad',i)}}return}
  const dd=UNITS[du.type],dn=dd.n;
  if(!dd.str){fx(i,'captured');if(du.own===0)note('Your '+dn+' was captured.','bad');kill(du);if(!ranged&&canEnter(a,i)&&!wallBlocks(a,i))place(a,i);return}
  const as=fl*uStr(a,ranged?'rng':'atk'),ds=uStr(du,'def',false,ranged),d=dmg(as,ds);du.hp-=d;du.xp+=3;fx(i,-d);if(ranged&&du.hp>0&&isMil(du)&&!inArmy(du))du.sup=1;
  if(!ranged){const back=dmg(ds,uStr(a,'atk'));a.hp-=back;fx(ai,-back)}
- if(du.hp<=0){if(a.hp<=0)a.hp=1;if(du.own===0)note('Your '+dn+' was killed by a '+an+'.','bad');if(a.own===0)note('Your '+an+' destroyed a '+dn+'.','good');kill(du);checkRout(du.own);a.xp+=5;
+ if(du.hp<=0){if(a.hp<=0)a.hp=1;if(du.own===0)note('Your '+dn+' was killed by a '+an+'.','bad',i);if(a.own===0)note('Your '+an+' destroyed a '+dn+'.','good');kill(du);checkRout(du.own);a.xp+=5;
   if(!ranged&&canEnter(a,i)&&!wallBlocks(a,i)){const cv2=cAt.get(i);if(cv2&&cv2.own!==a.own)kill(cv2);place(a,i)}}
  else if(a.hp<=0){if(a.own===0)note('Your '+an+' was killed attacking a '+dn+'.','bad');kill(a)}}
 function capture(city,a){const old=city.own,ci=idx(city.c,city.r);for(const m of[uAt,cAt]){const g=m.get(ci);if(g&&g.own!==a.own)kill(g)}
- note(G.players[a.own].name+' captured '+city.name+' from '+G.players[old].name+'.',a.own===0?'good':old===0?'bad':'');
+ note(G.players[a.own].name+' captured '+city.name+' from '+G.players[old].name+'.',a.own===0?'good':old===0?'bad':'',ci);
  city.own=a.own;city.pop=Math.max(1,city.pop-1);city.hp=Math.round(cityMaxHp(city)*.4);city.build=null;city.prod=0;if(cityOpen===city.id)cityOpen=null;G.roadVer++;
  place(a,ci);const loot=Math.min(G.players[old].gold,30+city.pop*8);G.players[old].gold-=loot;G.players[a.own].gold+=loot;
  checkElim(old);checkDomination();miniDirty=true;updateVis()}
@@ -685,7 +695,9 @@ function aiMilitary(pl,u){const d=UNITS[u.type];autoPromo(u);if(u.rout){let hm=n
  if(u.hp<40){u.fort=true;return}const stop=d.rs?d.rng:1;
  if(u.gar){const c=CM.get(u.gar);if(c&&c.own===u.own){if(u.c===c.c&&u.r===c.r)u.fort=true;else goToward(u,idx(c.c,c.r));return}u.gar=0}
  let goal=-1,gd=6;for(const e of G.units){if(!atWar(e.own,u.own))continue;const dd=dist(u.c,u.r,e.c,e.r);if(dd<gd&&(!pl.barb||!isWater(idx(e.c,e.r)))){gd=dd;goal=idx(e.c,e.r)}}
- if(goal<0){let cd=pl.barb?7:99;for(const c of G.cities){if(!atWar(c.own,u.own)||(!pl.barb&&G.players[c.own].barb))continue;const dd=dist(u.c,u.r,c.c,c.r);if(dd<cd){cd=dd;goal=idx(c.c,c.r)}}}
+ if(goal<0){let cd=pl.barb?7:99;for(const c of G.cities){if(!atWar(c.own,u.own)||(!pl.barb&&G.players[c.own].barb))continue;const dd=dist(u.c,u.r,c.c,c.r);if(dd<cd){cd=dd;goal=idx(c.c,c.r)}}
+  if(goal>=0&&!pl.barb&&cd>2&&cd<=5&&Math.random()<.8){let nf=0,fr=null,fd=99;for(const o of G.units){if(o===u||o.own!==u.own||!isMil(o)||UNITS[o.type].naval)continue;const q=dist(o.c,o.r,u.c,u.r);if(q<=2)nf++;else if(q<fd&&q<=8){fd=q;fr=o}}
+   if(nf<2&&fr){goToward(u,idx(fr.c,fr.r),1);u.fort=true;return}}}
  if(goal>=0){goToward(u,goal,stop);t=bestTarget(u);if(t!=null&&!u.dead)attack(u,t);return}
  if(pl.barb||u.type==='scout'){wander(u,.7);return}
  let home=null,hd=99;for(const c of citiesOf(pl.id)){const dd=dist(u.c,u.r,c.c,c.r);if(dd<hd){hd=dd;home=c}}
@@ -724,12 +736,12 @@ const buyCost=c=>Math.max(5,Math.ceil((itemCost(G.players[c.own],c.build)-c.prod
 /* ================= TURN FLOW ================= */
 function startTurn(pl){for(const u of unitsOf(pl.id)){u.mv=Math.max(1,mvOf(u)-(u.sup&&!inArmy(u)?1:0));u.acted=false;u.skip=false}}
 function endTurn(){if(G.over&&!G.cont){showOver();return}const h=human();pv=null;
- if(h.alive)endEconomy(h);endForm(0);
- for(const pl of G.players){if(pl.id===0||!pl.alive)continue;startTurn(pl);if(pl.barb)barbTurn(pl);else{aiTurn(pl);endEconomy(pl)}endForm(pl.id)}
+ sfx('turn');if(h.alive)endEconomy(h);endForm(0);if(!G.autoplay)aStart=aClock=performance.now()+150;
+ for(const pl of G.players){if(pl.id===0||!pl.alive)continue;startTurn(pl);if(pl.barb)barbTurn(pl);else{aiTurn(pl);endEconomy(pl)}endForm(pl.id)}aClock=0;
  worldStep();G.turn++;if(G.turn>MAXT&&!G.over){const best=G.players.filter(p=>!p.barb&&p.alive).sort((a,b)=>score(b)-score(a))[0];win(best,'score')}
  if(!h.alive&&!G.over)G.over={type:'defeat',who:-1};
  startTurn(h);for(const u of unitsOf(0)){if(u.goto!=null)follow(u);if(u.auto)autoWorker(u);if(u.explore)autoExplore(u)}
- updateVis();for(const u of unitsOf(0))if(u.sleep&&G.units.some(e=>atWar(e.own,0)&&dist(e.c,e.r,u.c,u.r)<=2&&vis[idx(e.c,e.r)])){u.sleep=false;note('Enemies are close to your sleeping '+UNITS[u.type].n+'.','bad')}
+ updateVis();for(const u of unitsOf(0))if(u.sleep&&G.units.some(e=>atWar(e.own,0)&&dist(e.c,e.r,u.c,u.r)<=2&&vis[idx(e.c,e.r)])){u.sleep=false;note('Enemies are close to your sleeping '+UNITS[u.type].n+'.','bad',idx(u.c,u.r))}
  save();miniDirty=true;if(!G.autoplay){if(G.over&&!G.cont)showOver();else{nextAsk();const u=selUnit();if(!u||!needsOrders(u))selectNext(true)}ui()}}
 const needsOrders=u=>u.own===0&&!u.skip&&((u.mv>0&&!u.fort&&!u.sleep&&u.goto==null&&!u.auto&&!u.work&&!u.explore&&!u.drill)||pendingPromo(u)>0);
 function selectNext(pan){const l=unitsOf(0).filter(needsOrders);pv=null;if(!l.length)return false;const cur=l.findIndex(u=>u.id===sel),u=l[(cur+1)%l.length];sel=u.id;reachC=null;if(pan)center(u.c,u.r);dirty=true;return true}
@@ -860,11 +872,11 @@ function drawSteam(x,sp,col,st){const t=st.t,ga=x.globalAlpha;x.save();x.rotate(
  poly(x,[-19,-8,19,-8,15,1,-14,1],sp.big?'#98a1aa':'#7b7066');x.fillStyle=col;x.fillRect(-16.5,-6.6,33,2.6);flag(x,-9,-15.5,col,t);x.restore()}
 function upos(u,now){const i=idx(u.c,u.r),civ=!UNITS[u.type].str,inCity=!!G.tiles[i].city,shared=civ?uAt.has(i):false;let X=hx(u.c,u.r),Y=hy(u.r)-2,rad=14;
  if(civ){if(shared||inCity){X-=16;Y+=11;rad=10}else rad=13}else if(inCity){X+=17;Y+=11;rad=10.5}
- if(u._t&&now-u._t<300){const k=(now-u._t)/300,e=k*(2-k),tx=hx(u.c,u.r),ty=hy(u.r);X+=(u._x-tx)*(1-e);Y+=(u._y-ty)*(1-e)}return{X,Y,rad}}
+ if(u._t&&now-u._t<300){const k=Math.max(0,(now-u._t)/300),e=k*(2-k),tx=hx(u.c,u.r),ty=hy(u.r);X+=(u._x-tx)*(1-e);Y+=(u._y-ty)*(1-e)}return{X,Y,rad}}
 function drawUnit(x,u,now){const d=UNITS[u.type],pl=G.players[u.own],i=idx(u.c,u.r),sp=SPR[u.type]||{},col=pl.barb?'#555':pl.color;let{X,Y,rad}=upos(u,now);
- const mk=u._t?(now-u._t)/300:9,walk=mk<1,ak=u._a?(now-u._a)/400:9,atk=ak<1?ak:-1,water=isWater(i),emb=water&&!d.naval;
+ const mk=u._t?(now-u._t)/300:9,walk=mk>=0&&mk<1,ak=u._a?(now-u._a)/400:9,atk=ak>=0&&ak<1?ak:-1,water=isWater(i),emb=water&&!d.naval;
  if(walk&&!water)Y-=Math.sin(mk*Math.PI)*5;if(atk>=0){const l=Math.sin(atk*Math.PI)*10;X+=(u._ax||0)*l;Y+=(u._ay||0)*l}
- if(u._h&&now-u._h<280)X+=Math.sin(now/14)*2.4;
+ if(u._h&&now>=u._h&&now-u._h<280)X+=Math.sin(now/14)*2.4;
  const k=rad/14*(sp.k==='horse'?.84:sp.k==='ship'||sp.k==='steam'?1:sp.k?.92:.98),f=u.face<0?-1:1,st={t:now,ph:(u.id*1.7)%6.28,walk,atk,work:!!u.work||!!u.drill},by=Y+rad*.95,selq=u.id===sel;
  x.beginPath();x.ellipse(X,by,rad*(water?1.25:.98),rad*.42,0,0,7);
  if(water){x.fillStyle='rgba(255,255,255,.35)';x.fill()}else{x.fillStyle=col;x.fill()}
@@ -978,8 +990,8 @@ function render(now){if(!G)return;const v=viewport(),{r0,r1}=v;if(cv.width!==Mat
   const mh=cityMaxHp(ct);if(ct.hp<mh){x.fillStyle=OUT;x.fillRect(lx,ly-7,tw,6);x.fillStyle='#ff6a55';x.fillRect(lx+1,ly-6,(tw-2)*ct.hp/mh,4)}
   if(ct.own===0&&ct.build){x.fillStyle=OUT;x.fillRect(lx+4,ly+19,tw-8,5);x.fillStyle='#ffd24a';x.fillRect(lx+5,ly+20,(tw-10)*Math.min(1,ct.prod/itemCost(human(),ct.build)),3)}
   labels.push({id:ct.id,x:lx,y:ly-7,w:tw,h:31})}
- const us=G.units.filter(u=>vis[idx(u.c,u.r)]&&u.r>=r0-1&&u.r<=r1+1).sort((a,b)=>a.r-b.r||(UNITS[a.type].str?1:0)-(UNITS[b.type].str?1:0));for(const u of us)drawUnit(x,u,now);
- fxs=fxs.filter(f=>now-f.t<1100);for(const f of fxs){const[c,r]=cr(f.i),k=(now-f.t)/1100,X=hx(c,r),Y=hy(r);
+ const us=G.units.filter(u=>vis[idx(u.c,u.r)]&&u.r>=r0-1&&u.r<=r1+1).sort((a,b)=>a.r-b.r||(UNITS[a.type].str?1:0)-(UNITS[b.type].str?1:0));for(const f of fxs)if(f.ghost)drawUnit(x,f.ghost,now);for(const u of us)drawUnit(x,u,now);
+ fxs=fxs.filter(f=>now-f.t<(f.life||1100));for(const f of fxs){if(now<f.t||f.ghost)continue;const[c,r]=cr(f.i),k=(now-f.t)/1100,X=hx(c,r),Y=hy(r);
   if(f.proj){const q=k*1100/420;if(q>1)continue;const[fc,fr]=cr(f.from),ax=hx(fc,fr),ay=hy(fr)-14,px=ax+(X-ax)*q,py=ay+(Y-10-ay)*q-Math.sin(q*Math.PI)*22;ink(x);
    if(f.proj==='arrow'){const q2=Math.max(0,q-.08),px2=ax+(X-ax)*q2,py2=ay+(Y-10-ay)*q2-Math.sin(q2*Math.PI)*22;stick(x,px2,py2,px,py,1.6,'#f3e7c0')}else circ(x,px,py,3.4,f.proj==='rock'?'#a9a9a9':'#333');continue}
   if(f.poof){const q=k*1100/520;if(q>1)continue;x.globalAlpha=1-q;x.fillStyle='#fff';for(let j=0;j<6;j++){const a=j*1.05+f.i;x.beginPath();x.arc(X+Math.cos(a)*q*20,Y-6+Math.sin(a)*q*13,7*(1-q*.5),0,7);x.fill()}x.globalAlpha=1;continue}
@@ -1051,7 +1063,7 @@ function ask(h,b){asks.push({h,b});nextAsk()}
 function unlocks(t){const o=[];for(const k in UNITS)if(UNITS[k].tech===t)o.push(UNITS[k].n);for(const k in BLD)if(BLD[k].tech===t)o.push(BLD[k].n);for(const k in WON)if(WON[k].tech===t)o.push(WON[k].n);for(const k in IMP)if(IMP[k].tech===t)o.push(IMP[k].n);if(TNOTE[t])o.push(TNOTE[t]);return o.join(', ')}
 function helpHTML(){return`<p>Click a unit to select it. Click a tile to see the route and how many turns it takes, then click the same tile again (or press Move) to go. Click the selected unit again to deselect it. You can switch the confirm step off under View. Right-click (or double-tap) a tile to send the selected unit there even when one of your own units stands on it. One military unit and one civilian can share a tile. Drag to pan, scroll or pinch to zoom. Click a city's name plate to open it. While a city screen is open the map takes no orders: a click on the map just closes it. Click a resource token for what it does, or any empty tile with nothing selected for its terrain details.</p>
   <p>Hover an enemy with a unit selected to see the odds. On a touch screen the first tap shows the odds and the second attacks. The View button toggles map layers: tile yields, resources, improvements, grid, and political or religion maps. Keys: Y yields, G grid, R resources, Enter ends the turn or jumps to the next unit, Space skips, F fortifies, Esc deselects.</p>
-  <p>Formations matter. A melee attack gets +10% for each other friendly soldier standing next to the target, up to +30% (flanking). A unit hit by ranged fire is suppressed: 20% weaker and one move slower through its next turn. Four or more of your soldiers standing in a connected group form an army, marked with a gold star: each fights 20% stronger, cannot be suppressed and mends 5 HP a turn even after fighting. If enemy kills leave a soldier from an army with no friendly soldier within two tiles, it routs: it falls back toward your nearest city at once and cannot attack on its next turn. Units earn XP in combat and a promotion at 10, 30, 60, 100 and 150 XP: select the unit with the gold arrow over it and pick one, or heal 50 HP on the spot. A unit ordered to Drill stays put and gains 2 XP a turn up to 30, enough for its first two promotions; moving or attacking ends the drill. Scouts and ships can Auto explore until the map runs out. Sleeping units wake when an enemy comes within two tiles. After Bronze Working a worker can clear a forest on your land: the trees are gone for good, the city that owns the tile gets a one-time production boost, and the open ground can then be farmed. Workers can add a wall to any land tile you own, on top of its farm or mine. Enemies at war with you cannot enter a walled tile until they knock it down; ballistas, catapults, cannons and artillery do it far faster than troops. Walls mend 6 HP a turn. When you reach a new age, the largest city that owns part of a wall line can build a Wall upgrade for the whole connected line. Keep happiness at zero or better: luxuries, arenas, temples and theatres raise it, every city costs 3 and every two citizens cost 1. Roads and harbors link cities to your capital for gold. Caravans open trade routes. Shrines and temples make faith for a religion.</p>
+  <p>Enemy moves and attacks now play out one after another at the start of your turn. Tap a notification with an arrow to jump to where it happened. Sound effects can be switched off under View. Formations matter. A melee attack gets +10% for each other friendly soldier standing next to the target, up to +30% (flanking). A unit hit by ranged fire is suppressed: 20% weaker and one move slower through its next turn. Four or more of your soldiers standing in a connected group form an army, marked with a gold star: each fights 20% stronger, cannot be suppressed and mends 5 HP a turn even after fighting. If enemy kills leave a soldier from an army with no friendly soldier within two tiles, it routs: it falls back toward your nearest city at once and cannot attack on its next turn. Units earn XP in combat and a promotion at 10, 30, 60, 100 and 150 XP: select the unit with the gold arrow over it and pick one, or heal 50 HP on the spot. A unit ordered to Drill stays put and gains 2 XP a turn up to 30, enough for its first two promotions; moving or attacking ends the drill. Scouts and ships can Auto explore until the map runs out. Sleeping units wake when an enemy comes within two tiles. After Bronze Working a worker can clear a forest on your land: the trees are gone for good, the city that owns the tile gets a one-time production boost, and the open ground can then be farmed. Workers can add a wall to any land tile you own, on top of its farm or mine. Enemies at war with you cannot enter a walled tile until they knock it down; ballistas, catapults, cannons and artillery do it far faster than troops. Walls mend 6 HP a turn. When you reach a new age, the largest city that owns part of a wall line can build a Wall upgrade for the whole connected line. Keep happiness at zero or better: luxuries, arenas, temples and theatres raise it, every city costs 3 and every two citizens cost 1. Roads and harbors link cities to your capital for gold. Caravans open trade routes. Shrines and temples make faith for a religion.</p>
   <p>Win by holding every original capital, launching a three-stage starship after Rocketry, or having the top score in ${yearOf(MAXT)}.</p>`}
 let setupO={nation:0,size:1,ai:3,diff:1},hadSave=false,startCancel=false;
 function showStart(mode,cancel){const el=$('#start');startCancel=!!cancel;let h;
@@ -1131,13 +1143,13 @@ const ACT={
  explore(){const u=selUnit();if(!u)return;u.explore=!u.explore;if(u.explore){u.goto=null;u.fort=u.sleep=u.drill=false;autoExplore(u);selectNext(true)}ui()},
  drill(){const u=selUnit();if(!u)return;u.drill=!u.drill;if(u.drill){u.goto=null;u.explore=false;selectNext(true)}ui()},
  go(){const u=selUnit();if(u&&pend&&pend.u===u.id){const i=pend.i;pend=null;order(u,i)}ui()},cancelMove(){pend=null;ui()},
- promo(k){const u=selUnit();if(u&&u.own===0&&pendingPromo(u)>0&&(k==='heal'||promoOpts(u).includes(k))){takePromo(u,k);note(UNITS[u.type].n+(k==='heal'?' patched up.':' learned '+PROMO[k].n+'.'),'good')}ui()},closeInfo(){info=null;ui()},
+ promo(k){const u=selUnit();if(u&&u.own===0&&pendingPromo(u)>0&&(k==='heal'||promoOpts(u).includes(k))){takePromo(u,k);sfx('promo');note(UNITS[u.type].n+(k==='heal'?' patched up.':' learned '+PROMO[k].n+'.'),'good')}ui()},closeInfo(){info=null;ui()},
  desel(){sel=null;pv=null;ui()}};
-const VOPT=[['res','Resources (R)'],['imp','Improvements'],['feat','Terrain art'],['grid','Hex grid (G)'],['tint','Territory tint'],['pol','Political map'],['rel','Religion map'],['routes','Trade routes'],['confirm','Confirm moves (tap twice)']];
+const VOPT=[['res','Resources (R)'],['imp','Improvements'],['feat','Terrain art'],['grid','Hex grid (G)'],['tint','Territory tint'],['pol','Political map'],['rel','Religion map'],['routes','Trade routes'],['confirm','Confirm moves (tap twice)'],['sound','Sound effects']];
 function viewUI(){$('#view').innerHTML='<div class="row"><b>Map view</b><button data-act="view" aria-label="Close">✕</button></div>'+`<label for="v_yields">Tile yields (Y) <select id="v_yields" data-v="yields">${['Off','My land','Whole map'].map((n,k)=>`<option value="${k}" ${(+V.yields||0)===k?'selected':''}>${n}</option>`).join('')}</select></label>`+VOPT.map(([k,n])=>`<label for="v_${k}"><input type="checkbox" id="v_${k}" data-v="${k}" ${V[k]?'checked':''}> ${n}</label>`).join('')+'<small>Left to right: food in green, production in orange, gold in yellow. Zeros are left blank. A selected settler always shows the yields around it.</small>'}
 function setV(k,val){V[k]=val==null?!V[k]:val;try{localStorage.setItem('meridian-view',JSON.stringify(V))}catch(e){}viewUI();dirty=true}
 document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.v;if(k)setV(k,e.target.tagName==='SELECT'?+e.target.value:e.target.checked);const k2=e.target.dataset&&e.target.dataset.s;if(k2)setupO[k2]=+e.target.value});
-document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!b.disabled&&G)ACT[b.dataset.act](b.dataset.arg);else if(e.target.id==='modal'&&!askFns.length)closeModal()});
+document.addEventListener('click',e=>{const tl=e.target.closest('.toast.go');if(tl&&G){const[c,r]=cr(+tl.dataset.loc);center(c,r);miniDirty=true;tl.remove();return}const b=e.target.closest('[data-act]');if(b&&!b.disabled&&G)ACT[b.dataset.act](b.dataset.arg);else if(e.target.id==='modal'&&!askFns.length)closeModal()});
 function order(u,i){if(!findPath(u,i)){note('No route there. Closed borders, water or mountains block the way.')}else{u.goto=i;u.auto=false;u.explore=false;follow(u);if(u.mv<=0||u.goto!=null)selectNext(false)}}
 function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>wx>=l.x&&wx<=l.x+l.w&&wy>=l.y&&wy<=l.y+l.h),now=performance.now(),pp=pend;info=null;pend=null;
  if(cityOpen){const c=lb&&CM.get(lb.id);if(c&&c.own===0&&c.id!==cityOpen){sel=null;pv=null;openCity(c.id)}else{cityOpen=null;ui()}return}
@@ -1151,7 +1163,7 @@ function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>
  if(mine&&e&&canAttack(u,i)){if(!atWar(0,e.own))ask(`<h2>Declare war on the ${esc(G.players[e.own].name)}?</h2><p>Attacking breaks the peace and ends your deals with them.</p>`,[['Stand down',()=>{}],['Declare war',()=>declareWar(0,e.own),'warn']]);
   else if(touch&&!(pv&&pv.i===i)){pv=preview(u,i);note('Tap again to attack.')}else{pv=null;attack(u,i);if(!selUnit()||selUnit().mv<=0)selectNext(false)}ui();return}
  pv=null;
- if(own.length&&vis[i]&&!force){const k=own.findIndex(o=>u&&o.id===u.id);if(k>=0&&k===own.length-1&&city&&city.own===0){sel=null;openCity(city.id)}else if(k>=0&&k===own.length-1){sel=null}else{const n=own[(k+1)%own.length];sel=n.id;n.sleep=false;n.fort=false;cityOpen=null}ui();return}
+ if(own.length&&vis[i]&&!force){const k=own.findIndex(o=>u&&o.id===u.id);if(k>=0&&k===own.length-1&&city&&city.own===0){sel=null;openCity(city.id)}else if(k>=0&&k===own.length-1){sel=null}else{const n=own[(k+1)%own.length];sel=n.id;sfx('sel');n.sleep=false;n.fort=false;cityOpen=null}ui();return}
  if(!mine&&city&&city.own===0){openCity(city.id);return}
  if(mine){if(idx(u.c,u.r)!==i){if(force||!V.confirm||(pp&&pp.i===i&&pp.u===u.id))order(u,i);
    else{const path=findPath(u,i);if(!path)note('No route there. Closed borders, water or mountains block the way.');else{let cst=0,pi=idx(u.c,u.r);for(const j of path){cst+=isWater(j)!==isWater(pi)?mvOf(u):stepCost(j,pi);pi=j}pend={i,u:u.id,p:path,t:Math.max(1,Math.ceil(cst/mvOf(u)))}}}}ui();return}
