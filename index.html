@@ -99,6 +99,33 @@ select{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid va
   #city{top:auto;height:62%;width:100%;border-left:0;border-top:2px solid var(--brass)}
   #tip{display:none}
 }
+@media (max-height:520px){
+  body{font-size:13px}
+  #bar{padding-block:3px;gap:2px 10px;flex-wrap:nowrap}
+  .brand,.xl,#mini,#tip{display:none}
+  #stats{font-size:12px;gap:0 10px}
+  #bar nav{flex-wrap:nowrap;gap:4px}
+  #bar nav button{padding:3px 7px;font-size:12px}
+  #left{max-width:min(360px,48%)}
+  #unit,#info{padding:6px 9px}
+  #unit h3,#info h3{font-size:14px}
+  #unit .row button,#info .row button{padding:2px 8px}
+  #unit .meta,#info .meta{margin:1px 0 5px;font-size:12px}
+  #info .pv,.pv{font-size:12px;margin-bottom:5px}
+  .acts button{padding:4px 8px}
+  #dock{padding-bottom:6px;gap:8px}
+  #bEnd{padding:7px 14px;font-size:14px}
+  #bSub{padding:5px 9px}
+  #city{width:min(310px,100%);padding:8px 10px}
+  #city h2{font-size:17px}
+  #city h4,.sheet h4{margin:9px 0 4px}
+  #modal{padding:6px}
+  .sheet{padding:10px 14px}
+  .sheet h2{font-size:18px}
+  #view{top:4px;padding:6px 9px;gap:3px;max-height:calc(100% - 8px);overflow-y:auto}
+  .toast{font-size:12px;padding:3px 8px}
+  #toasts{max-width:42%}
+}
 </style>
 
 <div id="app">
@@ -743,9 +770,9 @@ const esc=s=>String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[
 function ui(){if(!G)return;const h=human(),inc=income(h),sg=n=>(n>=0?'+':'')+n;
  const rt=h.research?TECH[h.research].n+' · '+Math.max(1,Math.ceil((TECH[h.research].cost-h.sci)/Math.max(1,inc.s)))+' turns':'none';
  const hp=inc.hap,ht=h.gaT>0?'golden age, '+h.gaT+' turns':hp<=-10?'revolt: production and armies suffer':hp<0?'unhappy: cities grow slowly':'content';
- $('#stats').innerHTML=`<span><b>Turn ${G.turn}</b> · ${yearOf(G.turn)}</span><span><i class="dot" style="background:var(--brass)"></i><b>${Math.floor(h.gold)}</b> gold (${sg(inc.g)})</span>
+ $('#stats').innerHTML=`<span><b>Turn ${G.turn}</b><span class="xl"> · ${yearOf(G.turn)}</span></span><span><i class="dot" style="background:var(--brass)"></i><b>${Math.floor(h.gold)}</b> gold (${sg(inc.g)})</span>
  <span><i class="dot" style="background:var(--sci)"></i><b>${sg(inc.s)}</b> science · ${esc(rt)}</span><span><i class="dot" style="background:var(--cul)"></i><b>${Math.floor(h.culture)}</b>${availPol(h).length?'/'+policyCost(h):''} culture (${sg(inc.c)})</span>
- <span><i class="dot" style="background:${hp<0?'var(--bad)':'var(--good)'}"></i><b>${hp}</b> happiness · ${ht}</span><span><i class="dot" style="background:#f3efe2"></i><b>${Math.floor(h.faith)}</b> faith (${sg(inc.fa)})</span>`;
+ <span><i class="dot" style="background:${hp<0?'var(--bad)':'var(--good)'}"></i><b>${hp}</b> happiness<span class="xl"> · ${ht}</span></span><span><i class="dot" style="background:#f3efe2"></i><b>${Math.floor(h.faith)}</b> faith (${sg(inc.fa)})</span>`;
  $('#bTech').classList.toggle('need',!h.research&&availTechs(h).length>0);$('#bPol').classList.toggle('need',h.culture>=policyCost(h)&&availPol(h).length>0);$('#bRel').classList.toggle('need',canFoundRel(h));
  const p=pending();$('#bEnd').textContent=p.l;$('#bSub').hidden=!p.soft;
  const u=selUnit(),box=$('#unit');
@@ -902,7 +929,7 @@ function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>
 
 /* ================= BOOT ================= */
 function boot(data){if(!(data&&data.G&&load(data.G))&&!load())newGame({nation:0,size:1,ai:3,diff:1});
- const u=unitsOf(0).find(needsOrders);if(u&&!sel){sel=u.id}viewUI();ui();requestAnimationFrame(loop);if(G.over&&!G.cont)showOver()}
+ const u=unitsOf(0).find(needsOrders);if(u&&!sel){sel=u.id}if(Math.min(innerWidth,innerHeight)<520)cam.z=.8;viewUI();ui();requestAnimationFrame(loop);if(G.over&&!G.cont)showOver()}
 window.DBG={get G(){return G},auto(n){G.autoplay=true;for(let k=0;k<n&&!(G.over&&!G.cont);k++){const h=human();if(h.alive){startTurn(h);aiTurn(h)}endTurn()}G.autoplay=false;updateVis();ui()}};
 try{window.claude?.hot?.snapshot(()=>({G:JSON.parse(ser())}))}catch(e){}
 if(window.claude?.hot?.ready)window.claude.hot.ready(boot);else boot(window.claude?.hot?.data??{});
