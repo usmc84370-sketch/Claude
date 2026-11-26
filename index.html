@@ -423,6 +423,70 @@ button.primary{box-shadow:0 3px 0 #b07d10;color:#3a2500}
 .yl div,.meter,.pv,select{border-radius:8px}
 .brand{font-weight:600;letter-spacing:.01em}
 #unit h3,#info h3,#city h2,.sheet h2,#bEnd{letter-spacing:.01em;font-weight:600}
+@media (max-height:520px){
+  body{font-size:13px}
+  #bar{padding-block:3px;gap:2px 10px;flex-wrap:nowrap}
+  .brand,.xl,#mini,#tip{display:none}
+  #stats{font-size:12px;gap:0 10px}
+  #bar nav{flex-wrap:nowrap;gap:4px}
+  #bar nav button{padding:3px 7px;font-size:12px}
+  #left{max-width:min(360px,48%)}
+  #unit,#info{padding:6px 9px}
+  #unit h3,#info h3{font-size:14px}
+  #unit .row button,#info .row button{padding:2px 8px}
+  #unit .meta,#info .meta{margin:1px 0 5px;font-size:12px}
+  #info .pv,.pv{font-size:12px;margin-bottom:5px}
+  .acts button{padding:4px 8px}
+  #dock{padding-bottom:6px;gap:8px}
+  #bEnd{padding:7px 14px;font-size:14px}
+  #bSub{padding:5px 9px}
+  #city{width:min(310px,100%);padding:8px 10px}
+  #city h2{font-size:17px}
+  #city h4,.sheet h4{margin:9px 0 4px}
+  #modal{padding:6px}
+  .sheet{padding:10px 14px}
+  .sheet h2{font-size:18px}
+  #view{top:4px;padding:6px 9px;gap:3px;max-height:calc(100% - 8px);overflow-y:auto}
+  .toast{font-size:12px;padding:3px 8px}
+  #toasts{max-width:42%}
+}
+.pv.promo{border-color:var(--brass)}.pv.promo .acts{margin-top:5px}.pv.promo small{color:var(--dim)}
+button{border-radius:10px;border-width:2px;font-weight:600;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+button.primary{box-shadow:0 3px 0 #b07d10;color:#3a2500}
+#unit,#info,#view,.sheet,.card,.toast,#tip,#mini{border-radius:12px}
+#unit,#info,#view,.sheet{border:2px solid var(--line);border-top:3px solid var(--brass)}
+#city{border-left:2px solid var(--line)}
+.yl div,.meter,.pv,select{border-radius:8px}
+.brand{font-weight:600;letter-spacing:.01em}
+#unit h3,#info h3,#city h2,.sheet h2,#bEnd{letter-spacing:.01em;font-weight:600}
+#app{position:relative}
+#start{position:absolute;inset:0;z-index:10;display:flex;align-items:flex-start;overflow-y:auto;background:radial-gradient(ellipse at 50% 30%,rgba(18,26,43,.7),rgba(9,13,24,.95));padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.hero{text-align:center;max-width:560px;margin:auto}
+.kick{color:var(--brass);font:600 13px var(--display);letter-spacing:.14em;text-transform:uppercase}
+.hero h1{font:700 clamp(38px,9vw,72px)/1 var(--display);margin:8px 0 12px;color:#fff;text-shadow:0 4px 0 #2b1c10,0 0 30px rgba(255,197,61,.35);text-wrap:balance}
+.hero p{color:var(--fg);margin:0 auto 22px;max-width:44ch;font-size:16px}
+.sbtn{display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto}
+button.big{padding:12px 18px;font:600 18px var(--display)}
+button.big small{display:block;font:500 12.5px var(--body);opacity:.8}
+.panel{background:var(--panel);border:2px solid var(--line);border-top:3px solid var(--brass);border-radius:14px;padding:16px 18px;max-width:880px;width:100%;margin:auto;min-width:0}
+.panel h2{margin:0 0 4px;font:600 24px var(--display)}
+.panel p{color:var(--dim);margin:6px 0;max-width:70ch}
+.panel h4{margin:12px 0 6px;font-size:11px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--dim)}
+.panel .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.nats{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.nat{text-align:left;background:transparent;display:block;border-left:7px solid var(--nc)}
+.nat.on{background:var(--panel2);border-color:var(--brass);border-left-color:var(--nc)}
+.nat em{display:block;font-style:normal;color:var(--brass);font-size:12.5px;margin:1px 0 2px}
+.nat small{display:block;color:var(--dim);font-weight:500;font-size:12px}
+.srow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 12px}
+@media (max-height:520px){
+  #start{padding-block:8px}
+  .hero h1{font-size:34px;margin:4px 0 6px}.hero p{margin-bottom:10px;font-size:14px}
+  .sbtn{flex-direction:row;max-width:none;justify-content:center;flex-wrap:wrap}
+  button.big{padding:7px 14px;font-size:15px}
+  .panel{padding:10px 14px}.panel h2{font-size:18px}
+  .nats{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+}
 </style>
 
 <div id="app">
@@ -453,6 +517,7 @@ button.primary{box-shadow:0 3px 0 #b07d10;color:#3a2500}
     </div>
     <div id="modal" hidden><div class="sheet" id="mbody"></div></div>
   </main>
+  <div id="start" hidden></div>
 </div>
 
 <script>
@@ -513,12 +578,14 @@ const POL={agrarian:{n:'Agrarianism',d:'+10% food in every city'},guilds:{n:'Gui
 const BELIEF={tithe:{n:'Tithe',d:'+1 gold for every 4 followers anywhere in the world'},festival:{n:'Harvest Festival',d:'+2 food in your cities of this faith'},cloisters:{n:'Cloisters',d:'+2 science in your cities of this faith'},
  pageantry:{n:'Pageantry',d:'+2 culture in your cities of this faith'},serenity:{n:'Serenity',d:'+1 happiness for each of your cities of this faith'},bulwark:{n:'Bulwark',d:'+6 defense in your cities of this faith'}};
 const RELS=[['The Solar Path','#f2c94c'],['Tidefaith','#58c7d8'],['Ember Covenant','#ef7b45'],['The Old Stones','#b8b8a8'],['Verdant Circle','#7fd27a']];
-const NATIONS=[{n:'Aurelian League',col:'#c0392b',cities:['Aurelis','Pontara','Vessane','Caldrum','Oristo','Marrow Bay','Thessany','Lumera','Corvane','Estrel']},
- {n:'Veshari Dominion',col:'#2f66c9',cities:['Vesh','Kadir','Solmaan','Tarakesh','Imruz','Bashir','Zalhem','Nurat','Qasim','Dehra']},
- {n:'Korrund Holds',col:'#d9771f',cities:['Korr','Hammerfell','Dunmark','Grettir','Skaldheim','Ironwick','Braga','Tornholt','Ulfsted','Varn']},
- {n:'Sylmar Republic',col:'#8e44ad',cities:['Sylmar','Elowen','Thistlemere','Aldermoor','Fennick','Wyrral','Harrowgate','Lindel','Mossford','Quillon']},
- {n:'Tessin Compact',col:'#128a7e',cities:['Tessin','Jadeport','Luoyan','Mirin','Hanzu','Seiko','Yunmei','Kaido','Pashan','Orishi']},
- {n:'Ostrava Throne',col:'#c2317f',cities:['Ostrava','Velk','Dravograd','Mirova','Zelenka','Kostrin','Bryn Tor','Radeska','Polvara','Stanik']}];
+const NATIONS=[{n:'Aurelian League',t:'trade',tn:'Merchant Fleets',td:["One extra trade route", "+2 gold from every trade route"],col:'#c0392b',cities:['Aurelis','Pontara','Vessane','Caldrum','Oristo','Marrow Bay','Thessany','Lumera','Corvane','Estrel']},
+ {n:'Veshari Dominion',t:'science',tn:'Star Readers',td:["+15% science in every city", "Starts the game knowing Pottery"],col:'#2f66c9',cities:['Vesh','Kadir','Solmaan','Tarakesh','Imruz','Bashir','Zalhem','Nurat','Qasim','Dehra']},
+ {n:'Korrund Holds',t:'forge',tn:'Forge-Born',td:["Mines give +1 production", "Melee foot soldiers fight 10% stronger"],col:'#d9771f',cities:['Korr','Hammerfell','Dunmark','Grettir','Skaldheim','Ironwick','Braga','Tornholt','Ulfsted','Varn']},
+ {n:'Sylmar Republic',t:'forest',tn:'Greenwardens',td:["Forest tiles give +1 food", "Units fight 20% stronger in forest"],col:'#8e44ad',cities:['Sylmar','Elowen','Thistlemere','Aldermoor','Fennick','Wyrral','Harrowgate','Lindel','Mossford','Quillon']},
+ {n:'Tessin Compact',t:'works',tn:'Master Builders',td:["Buildings and wonders build 20% faster", "+2 happiness"],col:'#128a7e',cities:['Tessin','Jadeport','Luoyan','Mirin','Hanzu','Seiko','Yunmei','Kaido','Pashan','Orishi']},
+ {n:'Ostrava Throne',t:'steppe',tn:'Wide Steppe',td:["Mounted units get +1 movement", "New cities start with a Monument"],col:'#c2317f',cities:['Ostrava','Velk','Dravograd','Mirova','Zelenka','Kostrin','Bryn Tor','Radeska','Polvara','Stanik']}];
+const trait=(pl,k)=>!!pl&&!pl.barb&&pl.nat!=null&&NATIONS[pl.nat].t===k;
+const bonusP=(pl,b)=>trait(pl,'works')&&b&&(b.k==='b'||b.k==='w')?1.2:1;
 const FOCUS={bal:{n:'Balanced',f:3,p:3,g:1.5},food:{n:'Food',f:5,p:1.5,g:1},prod:{n:'Production',f:2,p:5,g:1},gold:{n:'Gold',f:2,p:2,g:5}};
 
 /* ================= STATE + HELPERS ================= */
@@ -555,7 +622,7 @@ const pendingPromo=u=>UNITS[u.type].str?Math.max(0,level(u)-(u.pt||0)):0;
 const promoOpts=u=>Object.keys(PROMO).filter(k=>{const p=PROMO[k],h=u.pr||{};return(!p.c||p.c.includes(UNITS[u.type].cls))&&(h[k]||0)<p.max&&(!p.req||h[p.req])});
 function takePromo(u,k){if(k==='heal')u.hp=Math.min(100,u.hp+50);else{u.pr=u.pr||{};u.pr[k]=(u.pr[k]||0)+1}u.pt=(u.pt||0)+1;dirty=true}
 function autoPromo(u){while(pendingPromo(u)>0){const o=promoOpts(u);takePromo(u,u.hp<50||!o.length?'heal':pick(o))}}
-const rngOf=u=>UNITS[u.type].rng+((u.pr&&u.pr.range)||0),mvOf=u=>UNITS[u.type].mv+((u.pr&&u.pr.mobility)||0);
+const rngOf=u=>UNITS[u.type].rng+((u.pr&&u.pr.range)||0),mvOf=u=>UNITS[u.type].mv+((u.pr&&u.pr.mobility)||0)+(UNITS[u.type].cls==='mounted'&&trait(G.players[u.own],'steppe')?1:0);
 const promoList=u=>Object.keys(u.pr||{}).map(k=>PROMO[k].n+(u.pr[k]>1?' II':'')).join(', ');
 const yearOf=t=>{const y=-4000+(t-1)*20;return y<0?-y+' BC':(y||1)+' AD'};
 function rebuild(){uAt=new Map();cAt=new Map();CM=new Map();connC={};for(const u of G.units)mapOf(u).set(idx(u.c,u.r),u);for(const c of G.cities)CM.set(c.id,c);vis=new Uint8Array(G.W*G.H);updateVis()}
@@ -596,7 +663,7 @@ function newGame(o){const sz=[[38,24],[48,30],[62,38]][o.size],seed=o.seed||(Mat
  const big=genMap(sz[0],sz[1],seed);
  const order=[o.nation,...NATIONS.map((_,i)=>i).filter(i=>i!==o.nation).sort(()=>Math.random()-.5)].slice(0,o.ai+1);
  const base=id=>({id,alive:true,gold:20,sci:0,research:null,techs:{},culture:0,policies:[],war:{},warT:{},met:{},ob:{},ship:0,cn:0,faith:0,rel:null,ga:0,gaT:0,gaN:0,aggr:1});
- order.forEach((ni,id)=>G.players.push({...base(id),name:NATIONS[ni].n,nat:ni,color:NATIONS[ni].col,techs:{agriculture:1},aggr:R(.5,1.5),seen:id===0?new Array(G.W*G.H).fill(0):null}));
+ order.forEach((ni,id)=>G.players.push({...base(id),name:NATIONS[ni].n,nat:ni,color:NATIONS[ni].col,techs:NATIONS[ni].t==='science'?{agriculture:1,pottery:1}:{agriculture:1},aggr:R(.5,1.5),seen:id===0?new Array(G.W*G.H).fill(0):null}));
  G.players.push({...base(G.players.length),barb:true,name:'Raiders',color:'#2b2b2b',gold:0});
  const cand=[];for(let i=0;i<G.tiles.length;i++)if(G.tiles[i].lm===big&&!G.tiles[i].h){const s=rawSite(i);if(s>30)cand.push([i,s])}
  const starts=[pick(cand)[0]];
@@ -610,6 +677,7 @@ function newGame(o){const sz=[[38,24],[48,30],[62,38]][o.size],seed=o.seed||(Mat
 function tileYield(i,pl){const t=G.tiles[i],Tt=TERR[t.t];let f=Tt.f,p=Tt.p,g=Tt.g;if(t.h){f=0;p=2}if(t.f){f=1;p=t.h?2:1}
  if(t.res){const r=RES[t.res];f+=r.f||0;p+=r.p||0;g+=r.g||0}
  if(t.imp){const m=IMP[t.imp];f+=m.f||0;p+=m.p||0;g+=m.g||0;if(pl){if(t.imp==='farm'&&pl.techs.biology)f++;if((t.imp==='mine'||t.imp==='lumber')&&pl.techs.industrialization)p++}}
+ if(pl){if(t.imp==='mine'&&trait(pl,'forge'))p++;if(t.f&&trait(pl,'forest'))f++}
  return{f,p,g}}
 const capOf=p=>G.cities.find(c=>c.own===p);
 const growNeed=pop=>Math.round(12+7*(pop-1)+Math.pow(pop,1.6));
@@ -621,7 +689,7 @@ function cityStr(c){const pl=G.players[c.own];let s=8+c.pop*1.2+eraOf(pl)*5+c.b.
  const g=uAt.get(idx(c.c,c.r));if(g&&g.own===c.own)s+=UNITS[g.type].str*.25;return s}
 function luxOf(p){const own={};for(const c of G.cities)if(c.own===p)for(const i of c.tiles){const r=G.tiles[i].res;if(r&&RES[r].lux)own[r]=(own[r]||0)+1}
  const set={...own};for(const d of G.deals){if(d.from===p&&set[d.res])set[d.res]--;if(d.to===p)set[d.res]=(set[d.res]||0)+1}return{own,set}}
-function happiness(pl){if(pl.barb)return 0;const cs=citiesOf(pl.id);let h=7+(pl.id===0?[3,0,-1][G.diff]:[0,2,4][G.diff]),pop=0;const L=luxOf(pl.id).set;for(const r in L)if(L[r]>0)h+=4;
+function happiness(pl){if(pl.barb)return 0;const cs=citiesOf(pl.id);let h=7+(pl.id===0?[3,0,-1][G.diff]:[0,2,4][G.diff]),pop=0;const L=luxOf(pl.id).set;for(const r in L)if(L[r]>0)h+=4;if(trait(pl,'works'))h+=2;
  for(const c of cs){pop+=c.pop;for(const b of c.b)h+=(BLD[b]||WON[b]).hap||0;if(myFaith(c,'serenity'))h++}return Math.round(h-cs.length*3-pop*.5)}
 function connected(p){const key=G.turn+':'+G.roadVer+':'+G.cities.length,cc=connC[p];if(cc&&cc.key===key)return cc.set;const set=new Set(),cap=capOf(p);
  if(cap){const st=[idx(cap.c,cap.r)],sn=new Set(st);while(st.length){const i=st.pop(),ct=cityAtI(i);if(ct&&ct.own===p)set.add(ct.id);for(const j of nbrI(i)){if(sn.has(j))continue;const t=G.tiles[j];if(t.road||t.city){sn.add(j);st.push(j)}}}
@@ -637,7 +705,7 @@ function cityYields(c,hap){const pl=G.players[c.own],ctr=idx(c.c,c.r),harbor=c.b
  let pf=0,pp=0,pg=0,ps=0,maint=0;
  for(const b of c.b){const d=BLD[b]||WON[b];f+=d.f||0;p+=d.p||0;g+=d.g||0;s+=d.s||0;cu+=d.c||0;fa+=d.fa||0;pp+=d.pp||0;pg+=d.pg||0;ps+=d.ps||0;if(d.sciPop)s+=Math.floor(c.pop/2)*d.sciPop;if(BLD[b]&&b!=='monument'&&b!=='shrine')maint++}
  if(c.rel!=null){fa+=1;if(myFaith(c,'festival'))f+=2;if(myFaith(c,'cloisters'))s+=2;if(myFaith(c,'pageantry'))cu+=2}
- const P=pl.policies;if(P.includes('agrarian'))pf+=.1;if(P.includes('guilds'))pp+=.1;if(P.includes('mercantile'))pg+=.15;if(P.includes('scholarship'))ps+=.1;if(P.includes('heritage'))cu+=2;
+ const P=pl.policies;if(P.includes('agrarian'))pf+=.1;if(P.includes('guilds'))pp+=.1;if(P.includes('mercantile'))pg+=.15;if(P.includes('scholarship'))ps+=.1;if(P.includes('heritage'))cu+=2;if(trait(pl,'science'))ps+=.15;
  if(pl.gaT>0){pp+=.2;pg+=.2}if(hap<=-10)pp-=.25;
  f=Math.round(f*(1+pf));p=Math.round(p*(1+pp));g=Math.round(g*(1+pg));s=Math.round(s*(1+ps));
  return{f,p,g,s,c:cu,fa,surplus:f-2*c.pop,worked,maint,conn}}
@@ -685,7 +753,7 @@ function claimTile(c){let best=-1,bs=-1e9;for(const i of within(c.c,c.r,3)){cons
  if(best<0)return false;G.tiles[best].own=c.id;c.tiles.push(best);return true}
 function foundCity(u){const pl=G.players[u.own],i=idx(u.c,u.r),nat=NATIONS[pl.nat],nm=nat.cities[pl.cn%nat.cities.length];
  const c={id:G.nid++,own:u.own,orig:u.own,name:(pl.cn>=nat.cities.length?'New ':'')+nm,c:u.c,r:u.r,pop:1,food:0,prod:0,build:null,b:[],hp:200,cul:0,tiles:[],focus:'bal',cap:pl.cn===0,rel:null,rp:{}};
- pl.cn++;kill(u);G.cities.push(c);CM.set(c.id,c);const t=G.tiles[i];t.city=c.id;t.imp=null;t.f=0;if(t.own&&t.own!==c.id){const o=CM.get(t.own);o.tiles.splice(o.tiles.indexOf(i),1)}t.own=c.id;c.tiles.push(i);
+ pl.cn++;kill(u);G.cities.push(c);if(trait(pl,'steppe'))c.b.push('monument');CM.set(c.id,c);const t=G.tiles[i];t.city=c.id;t.imp=null;t.f=0;if(t.own&&t.own!==c.id){const o=CM.get(t.own);o.tiles.splice(o.tiles.indexOf(i),1)}t.own=c.id;c.tiles.push(i);
  for(const j of nbrI(i))if(!G.tiles[j].own){G.tiles[j].own=c.id;c.tiles.push(j)}
  if(u.own===0){note('Founded '+c.name+'.','good');updateVis();openCity(c.id)}miniDirty=true;return c}
 function canFound(u){const i=idx(u.c,u.r),t=G.tiles[i];if(isWater(i)||TERR[t.t].block)return false;if(t.own&&CM.get(t.own).own!==u.own)return false;return!G.cities.some(c=>dist(c.c,c.r,u.c,u.r)<3)}
@@ -693,7 +761,7 @@ function endEconomy(pl){if(pl.barb)return;const inc=income(pl),hap=inc.hap,mul=p
  if(pl.gaT>0)pl.gaT--;else if(hap>0){pl.ga+=hap;if(pl.ga>=150+130*pl.gaN){pl.ga=0;pl.gaN++;pl.gaT=8;if(pl.id===0)note('A golden age begins: +20% production and gold for 8 turns.','good')}}
  for(const c of citiesOf(pl.id)){const y=cityYields(c,hap);let sp=y.surplus;if(sp>0&&hap<0)sp=Math.floor(sp/3);c.food+=sp;const need=growNeed(c.pop);
   if(c.food>=need){c.pop++;c.food=c.b.includes('aqueduct')?Math.round(need*.4):0}else if(c.food<0){if(c.pop>1){c.pop--;if(pl.id===0)note(c.name+' is starving.','bad')}c.food=0}
-  if(c.build){c.prod+=y.p*mul;if(c.prod>=itemCost(pl,c.build))complete(c)}else pl.gold+=Math.floor(y.p/2);
+  if(c.build){c.prod+=y.p*mul*bonusP(pl,c.build);if(c.prod>=itemCost(pl,c.build))complete(c)}else pl.gold+=Math.floor(y.p/2);
   c.cul+=y.c;let guard=0;while(c.cul>=borderCost(c)&&guard++<3){c.cul-=borderCost(c);if(!claimTile(c))break}
   c.hp=Math.min(cityMaxHp(c),c.hp+15);
   let tg=null,td=9;for(const i of within(c.c,c.r,2)){const e=uAt.get(i);if(e&&atWar(e.own,pl.id)){const d=distI(i,idx(c.c,c.r));if(d<td||(d===td&&e.hp<tg.hp)){td=d;tg=e}}}
@@ -724,9 +792,9 @@ function worldStep(){for(const c of G.cities){if(c.rel==null)continue;const hol=
  G.routes=G.routes.filter(r=>{const a=CM.get(r.a),b=CM.get(r.b),ok=a&&b&&a.own===r.own&&!atWar(r.own,b.own)&&r.until>G.turn;if(!ok&&r.own===0)note('Your trade route '+(a?a.name:'?')+' to '+(b?b.name:'?')+' has ended.');return ok});
  G.deals=G.deals.filter(d=>{const ok=d.until>G.turn&&!atWar(d.from,d.to)&&G.players[d.from].alive&&G.players[d.to].alive;if(!ok&&(d.from===0||d.to===0))note('The '+RES[d.res].n+' trade deal has ended.');return ok});
  for(const p of G.players)for(const k in p.ob)if(p.ob[k]<=G.turn){delete p.ob[k];if(p.id===0)note('Open borders with '+G.players[k].name+' expired.')}}
-const routeCap=pl=>2+eraOf(pl);
+const routeCap=pl=>2+eraOf(pl)+(trait(pl,'trade')?1:0);
 const homeOf=u=>{const h=CM.get(u.home);return h&&h.own===u.own?h:capOf(u.own)};
-const routeGold=(pl,a,b)=>2+Math.floor(dist(a.c,a.r,b.c,b.r)/3)+(b.own!==pl.id?2:0)+eraOf(pl);
+const routeGold=(pl,a,b)=>2+Math.floor(dist(a.c,a.r,b.c,b.r)/3)+(b.own!==pl.id?2:0)+eraOf(pl)+(trait(pl,'trade')?2:0);
 function canTrade(u){const pl=G.players[u.own],home=homeOf(u);if(u.type!=='caravan'||!home||G.routes.filter(r=>r.own===u.own).length>=routeCap(pl))return null;
  return G.cities.find(c=>c.id!==home.id&&dist(c.c,c.r,u.c,u.r)<=1&&!atWar(c.own,u.own)&&!G.routes.some(r=>r.own===u.own&&r.a===home.id&&r.b===c.id))||null}
 function establish(u,c){const pl=G.players[u.own],home=homeOf(u),g=routeGold(pl,home,c);G.routes.push({own:u.own,a:home.id,b:c.id,until:G.turn+30,g});
@@ -776,7 +844,7 @@ function reach(u){const m=new Map(),si=idx(u.c,u.r),h=new Heap();m.set(si,u.mv);
 function uStr(u,mode,vsCity,vsR){const d=UNITS[u.type],pl=G.players[u.own],t=G.tiles[idx(u.c,u.r)],P=u.pr||{};let s=mode==='rng'?d.rs:d.str;
  if(mode==='def'){if(TERR[t.t].water&&!d.naval)s=Math.min(s,5);if(t.h||t.f)s*=1.25;if(u.fort)s*=1.25}
  if(vsCity&&mode==='rng'&&d.cls==='siege')s*=2;if(vsCity&&mode==='atk'&&(d.cls==='mounted'||d.cls==='armor'))s*=.75;
- if(mode==='atk')s*=1+.15*(P.shock||0);if(mode==='def'){s*=1+.15*(P.drill||0);if(vsR&&P.cover)s*=1.3}if(mode==='rng')s*=1+.15*(P.accuracy||0);if(vsCity&&P.siege&&mode!=='def')s*=1.3;if(pl.policies.includes('discipline'))s*=1.1;if(!pl.barb&&happiness(pl)<=-10)s*=.8;return s*(.5+.5*u.hp/100)}
+ if(mode==='atk')s*=1+.15*(P.shock||0);if(mode==='def'){s*=1+.15*(P.drill||0);if(vsR&&P.cover)s*=1.3}if(mode==='rng')s*=1+.15*(P.accuracy||0);if(vsCity&&P.siege&&mode!=='def')s*=1.3;if(pl.policies.includes('discipline'))s*=1.1;if(d.cls==='melee'&&trait(pl,'forge'))s*=1.1;if(t.f&&!d.naval&&trait(pl,'forest'))s*=1.2;if(!pl.barb&&happiness(pl)<=-10)s*=.8;return s*(.5+.5*u.hp/100)}
 const dmgE=(a,d)=>30*Math.exp(.04*(a-d));
 const dmg=(a,d)=>Math.max(1,Math.min(100,Math.round(dmgE(a,d)*R(.8,1.2))));
 function canAttack(u,i){const d=UNITS[u.type],si=idx(u.c,u.r);if(u.mv<=0||!d.str)return false;const ds=distI(si,i);
@@ -1219,10 +1287,10 @@ function infoHTML(i){const t=G.tiles[i],Tt=TERR[t.t],h=human(),y=tileYield(i,h),
 function openCity(id){cityOpen=id;ui()}
 function renderCity(){const el=$('#city'),c=cityOpen&&CM.get(cityOpen);if(!c||c.own!==0){el.hidden=true;cityOpen=null;return}const pl=human(),y=cityYields(c),need=growNeed(c.pop),hap=happiness(pl);
  const gt=y.surplus>0?Math.ceil((need-c.food)/Math.max(1,hap<0?Math.floor(y.surplus/3):y.surplus))+' turns to grow'+(hap<0?' (slowed by unhappiness)':''):y.surplus<0?'starving':'not growing';
- const cur=c.build?`<div class="row"><b>${itemName(c.build)}</b><span>${Math.floor(c.prod)}/${itemCost(pl,c.build)} · ${Math.max(1,Math.ceil((itemCost(pl,c.build)-c.prod)/Math.max(1,y.p)))} turns</span></div><div class="meter"><i style="width:${Math.min(100,c.prod/itemCost(pl,c.build)*100)}%"></i></div>
+ const cur=c.build?`<div class="row"><b>${itemName(c.build)}</b><span>${Math.floor(c.prod)}/${itemCost(pl,c.build)} · ${Math.max(1,Math.ceil((itemCost(pl,c.build)-c.prod)/Math.max(1,y.p*bonusP(pl,c.build))))} turns</span></div><div class="meter"><i style="width:${Math.min(100,c.prod/itemCost(pl,c.build)*100)}%"></i></div>
   ${c.build.k==='u'||c.build.k==='b'?`<button style="margin-top:6px" data-act="buy" ${pl.gold>=buyCost(c)?'':'disabled'}>Buy now for ${buyCost(c)} gold</button>`:''}`:'<b style="color:var(--brass)">Nothing in production. Pick something below.</b>';
  const opts=buildOptions(c),grp=(k,t)=>{const l=opts.filter(o=>o.k===k);if(!l.length)return'';return`<h4>${t}</h4>`+l.map(o=>{const d=k==='u'?UNITS[o.id]:k==='b'?BLD[o.id]:k==='w'?WON[o.id]:null,cost=itemCost(pl,o),on=c.build&&c.build.k===o.k&&c.build.id===o.id;
-   return`<button class="opt${on?' cur':''}" data-act="build" data-arg="${o.k}:${o.id}"><span>${itemName(o)}${k==='p'?' '+(pl.ship+1)+' of 3':''}<small>${k==='u'?uDesc(d):k==='p'?'Complete all three to win':bDesc(d)}</small></span><span class="c">${cost}<small>${Math.max(1,Math.ceil((cost-(on?c.prod:Math.min(c.prod,0)))/Math.max(1,y.p)))} turns</small></span></button>`}).join('')};
+   return`<button class="opt${on?' cur':''}" data-act="build" data-arg="${o.k}:${o.id}"><span>${itemName(o)}${k==='p'?' '+(pl.ship+1)+' of 3':''}<small>${k==='u'?uDesc(d):k==='p'?'Complete all three to win':bDesc(d)}</small></span><span class="c">${cost}<small>${Math.max(1,Math.ceil((cost-(on?c.prod:Math.min(c.prod,0)))/Math.max(1,y.p*bonusP(pl,o))))} turns</small></span></button>`}).join('')};
  const rts=G.routes.filter(r=>r.a===c.id||r.b===c.id).map(r=>{const o=CM.get(r.a===c.id?r.b:r.a);return esc(o?o.name:'?')+(r.own===0?' (+'+r.g+' gold, ':' (+1 gold, ')+(r.until-G.turn)+' turns)'}).join(', ');
  el.innerHTML=`<div class="row"><h2>${esc(c.name)}${c.cap?' ★':''}</h2><button data-act="closeCity" aria-label="Close">✕</button></div>
  <div style="color:var(--dim)">Population ${c.pop} · ${gt} · defense ${Math.round(cityStr(c))} · HP ${Math.round(c.hp)}/${cityMaxHp(c)}</div>
@@ -1237,6 +1305,22 @@ function closeModal(){$('#modal').hidden=true;askFns=[];nextAsk()}
 function nextAsk(){if(!$('#modal').hidden||!asks.length)return;const a=asks.shift();modal(a.h+`<div class="foot">${a.b.map((b,i)=>`<button class="${b[2]||''}" data-act="ask" data-arg="${i}">${b[0]}</button>`).join('')}</div>`);askFns=a.b.map(b=>b[1])}
 function ask(h,b){asks.push({h,b});nextAsk()}
 function unlocks(t){const o=[];for(const k in UNITS)if(UNITS[k].tech===t)o.push(UNITS[k].n);for(const k in BLD)if(BLD[k].tech===t)o.push(BLD[k].n);for(const k in WON)if(WON[k].tech===t)o.push(WON[k].n);for(const k in IMP)if(IMP[k].tech===t)o.push(IMP[k].n);if(TNOTE[t])o.push(TNOTE[t]);return o.join(', ')}
+function helpHTML(){return`<p>Click a unit to select it. Click a tile to see the route and how many turns it takes, then click the same tile again (or press Move) to go. Click the selected unit again to deselect it. You can switch the confirm step off under View. Right-click (or double-tap) a tile to send the selected unit there even when one of your own units stands on it. One military unit and one civilian can share a tile. Drag to pan, scroll or pinch to zoom. Click a city's name plate to open it. While a city screen is open the map takes no orders: a click on the map just closes it. Click a resource token for what it does, or any empty tile with nothing selected for its terrain details.</p>
+  <p>Hover an enemy with a unit selected to see the odds. On a touch screen the first tap shows the odds and the second attacks. The View button toggles map layers: tile yields, resources, improvements, grid, and political or religion maps. Keys: Y yields, G grid, R resources, Enter ends the turn or jumps to the next unit, Space skips, F fortifies, Esc deselects.</p>
+  <p>Units earn XP in combat and a promotion at 10, 30, 60, 100 and 150 XP: select the unit with the gold arrow over it and pick one, or heal 50 HP on the spot. A unit ordered to Drill stays put and gains 2 XP a turn up to 30, enough for its first two promotions; moving or attacking ends the drill. Scouts can Auto explore until the map runs out. Keep happiness at zero or better: luxuries, arenas, temples and theatres raise it, every city costs 3 and every two citizens cost 1. Roads and harbors link cities to your capital for gold. Caravans open trade routes. Shrines and temples make faith for a religion.</p>
+  <p>Win by holding every original capital, launching a three-stage starship after Rocketry, or having the top score in ${yearOf(MAXT)}.</p>`}
+let setupO={nation:0,size:1,ai:3,diff:1},hadSave=false,startCancel=false;
+function showStart(mode,cancel){const el=$('#start');startCancel=!!cancel;let h;
+ if(mode==='home')h=`<div class="hero"><div class="kick">A pocket 4X strategy game</div><h1>Meridian Empires</h1><p>Found cities, chart the map, trade, preach, and outlast your rivals across six ages.</p>
+  <div class="sbtn">${hadSave?`<button class="primary big" data-act="resume">Continue<small>Turn ${G.turn} · ${esc(human().name)}</small></button>`:''}<button class="${hadSave?'':'primary '}big" data-act="create">Create game<small>Pick a nation and a world</small></button><button class="big" data-act="howto">How to play</button></div></div>`;
+ else if(mode==='help')h=`<div class="panel"><h2>How to play</h2>${helpHTML()}<div class="foot"><button class="primary" data-act="home">Back</button></div></div>`;
+ else{const o=setupO,sl=(k,opts)=>`<select id="s_${k}" data-s="${k}">${opts.map(([v,n])=>`<option value="${v}" ${o[k]===v?'selected':''}>${n}</option>`).join('')}</select>`;
+  h=`<div class="panel"><h2>Create game</h2>${cancel?'<p>Starting replaces the game in progress.</p>':'<p>Every nation plays by the same rules but brings its own edge.</p>'}<h4>Your nation</h4>
+  <div class="nats">${NATIONS.map((n,i)=>`<button class="nat${o.nation===i?' on':''}" data-act="pickNat" data-arg="${i}" style="--nc:${n.col}"><b>${n.n}</b><em>${n.tn}</em>${n.td.map(d=>`<small>${d}</small>`).join('')}</button>`).join('')}</div>
+  <div class="srow"><div><label class="f" for="s_size">Map</label>${sl('size',[[0,'Small'],[1,'Standard'],[2,'Large']])}</div><div><label class="f" for="s_ai">Rival nations</label>${sl('ai',[[2,'2'],[3,'3'],[4,'4'],[5,'5']])}</div>
+  <div><label class="f" for="s_diff">Difficulty</label>${sl('diff',[[0,'Settler (easier)'],[1,'Captain (even)'],[2,'Warlord (harder)']])}</div></div>
+  <div class="foot"><button data-act="${cancel?'resume':'home'}">${cancel?'Cancel':'Back'}</button><button class="primary" data-act="start">Start as the ${NATIONS[o.nation].n}</button></div></div>`}
+ el.innerHTML=h;el.hidden=false;el.scrollTop=0}
 function showOver(){const o=G.over,pl=o.who>=0?G.players[o.who]:null,me=o.who===0;
  const t=o.type==='defeat'?'Your civilization has fallen':me?'Victory':'Defeat';
  const why={domination:' holds every original capital.',science:' launched the first starship.',score:' leads the world as the age closes in '+yearOf(MAXT)+'.'}[o.type];
@@ -1262,6 +1346,7 @@ const ACT={
  diplo(){const h=human(),l=G.players.filter(p=>!p.barb&&p.id!==0&&h.met[p.id]&&p.alive);const lx=luxOf(0).set,ll=Object.keys(lx).filter(k=>lx[k]>0).map(k=>RES[k].n).join(', ');
   modal(`<div class="row"><h2>Diplomacy</h2><button data-act="close">✕</button></div>${scoreTable()}<p>Your luxuries: ${ll||'none'}. Trade routes in use: ${G.routes.filter(r=>r.own===0).length} of ${routeCap(h)}. Foreign land is closed to your armies unless you agree open borders or go to war.</p>
   ${l.length?l.map(p=>{const at=attitude(p,h),of=offers(p);return`<div class="card"><div class="row"><b><i class="dot" style="background:${p.color}"></i>${esc(p.name)}</b><span style="color:var(--dim)">${h.war[p.id]?'At war':attName(at)} · army ${power(p)>power(h)*1.3?'stronger than yours':power(p)<power(h)*.7?'weaker than yours':'about equal'} · ${Math.floor(p.gold)} gold</span></div>
+   <div style="color:var(--dim);font-size:12.5px;margin-top:3px">${NATIONS[p.nat].tn}: ${NATIONS[p.nat].td.join('. ')}.</div>
    <div class="acts" style="margin-top:6px">${of.map(o=>`<button data-act="${o[0]}" data-arg="${o[1]}" ${h.gold>=o[3]?'':'disabled'}>${o[2]}</button>`).join('')}${h.war[p.id]?`<button data-act="peace" data-arg="${p.id}">Propose peace</button>`:`<button class="warn" data-act="war" data-arg="${p.id}">Declare war</button>`}</div></div>`}).join(''):'<p>You have not met another nation yet. Explore.</p>'}`)},
  war(p){declareWar(0,+p);ACT.diplo();ui()},
  peace(p){const o=G.players[+p];if(aiWantsPeace(o,human())){makePeace(0,o.id)}else note(o.name+' refuses to make peace.','bad');ACT.diplo();ui()},
@@ -1272,19 +1357,14 @@ const ACT={
  sellTech(a){const[o,k]=deal(a),pr=Math.min(Math.floor(o.gold),Math.round(TECH[k].cost*.8));o.gold-=pr;human().gold+=pr;o.techs[k]=1;if(o.research===k)o.research=null;o.tt=G.turn;note('Sold '+TECH[k].n+' to '+o.name+' for '+pr+' gold.','good');ACT.diplo();ui()},
  menu(){modal(`<div class="row"><h2>Meridian Empires</h2><button data-act="close">✕</button></div>
   <p>Turn ${G.turn} of ${MAXT}. The game saves itself to this browser at the start of every turn.</p>
-  <h4>How to play</h4><p>Click a unit to select it. Click a tile to see the route and how many turns it takes, then click the same tile again (or press Move) to go. Click the selected unit again to deselect it. You can switch the confirm step off under View. Right-click (or double-tap) a tile to send the selected unit there even when one of your own units stands on it. One military unit and one civilian can share a tile. Drag to pan, scroll or pinch to zoom. Click a city's name plate to open it. While a city screen is open the map takes no orders: a click on the map just closes it. Click a resource token for what it does, or any empty tile with nothing selected for its terrain details.</p>
-  <p>Hover an enemy with a unit selected to see the odds. On a touch screen the first tap shows the odds and the second attacks. The View button toggles map layers: tile yields, resources, improvements, grid, and political or religion maps. Keys: Y yields, G grid, R resources, Enter ends the turn or jumps to the next unit, Space skips, F fortifies, Esc deselects.</p>
-  <p>Units earn XP in combat and a promotion at 10, 30, 60, 100 and 150 XP: select the unit with the gold arrow over it and pick one, or heal 50 HP on the spot. A unit ordered to Drill stays put and gains 2 XP a turn up to 30, enough for its first two promotions; moving or attacking ends the drill. Scouts can Auto explore until the map runs out. Keep happiness at zero or better: luxuries, arenas, temples and theatres raise it, every city costs 3 and every two citizens cost 1. Roads and harbors link cities to your capital for gold. Caravans open trade routes. Shrines and temples make faith for a religion.</p>
-  <p>Win by holding every original capital, launching a three-stage starship after Rocketry, or having the top score in ${yearOf(MAXT)}.</p>
+  ${helpHTML()}
   <h4>Chronicle</h4><div style="color:var(--dim);max-height:160px;overflow-y:auto">${G.log.slice().reverse().map(esc).join('<br>')||'Nothing yet.'}</div>
-  <div class="foot"><button data-act="setup">New game</button><button class="primary" data-act="close">Back to the map</button></div>`)},
- setup(){modal(`<h2>New game</h2><p>This replaces the game in progress.</p>
-  <label class="f" for="sNat">Your nation</label><select id="sNat">${NATIONS.map((n,i)=>`<option value="${i}">${n.n}</option>`).join('')}</select>
-  <label class="f" for="sSize">Map</label><select id="sSize"><option value="0">Small</option><option value="1" selected>Standard</option><option value="2">Large</option></select>
-  <label class="f" for="sAi">Rival nations</label><select id="sAi"><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
-  <label class="f" for="sDiff">Difficulty</label><select id="sDiff"><option value="0">Settler: rivals build and research slower</option><option value="1" selected>Captain: even footing</option><option value="2">Warlord: rivals build and research faster</option></select>
-  <div class="foot"><button data-act="close">Cancel</button><button class="primary" data-act="start">Start</button></div>`)},
- start(){const o={nation:+$('#sNat').value,size:+$('#sSize').value,ai:+$('#sAi').value,diff:+$('#sDiff').value};$('#modal').hidden=true;asks=[];askFns=[];$('#toasts').innerHTML='';info=null;newGame(o);save();ui()},
+  <div class="foot"><button data-act="home">Title screen</button><button data-act="setup">New game</button><button class="primary" data-act="close">Back to the map</button></div>`)},
+ setup(){$('#modal').hidden=true;askFns=[];asks=[];showStart('create',true)},
+ home(){$('#modal').hidden=true;askFns=[];showStart('home')},create(){showStart('create',false)},howto(){showStart('help')},
+ pickNat(i){setupO.nation=+i;const y=$('#start').scrollTop;showStart('create',startCancel);$('#start').scrollTop=y},
+ resume(){$('#start').hidden=true;nextAsk();ui()},
+ start(){$('#start').hidden=true;$('#modal').hidden=true;asks=[];askFns=[];$('#toasts').innerHTML='';info=null;pend=null;newGame({...setupO});hadSave=true;save();ui()},
  cont(){G.cont=true;closeModal();ui()},close(){closeModal()},
  ask(i){const fn=askFns[+i];askFns=[];$('#modal').hidden=true;fn&&fn();nextAsk();ui()},
  closeCity(){cityOpen=null;ui()},
@@ -1310,7 +1390,7 @@ const ACT={
 const VOPT=[['res','Resources (R)'],['imp','Improvements'],['feat','Terrain art'],['grid','Hex grid (G)'],['tint','Territory tint'],['pol','Political map'],['rel','Religion map'],['routes','Trade routes'],['confirm','Confirm moves (tap twice)']];
 function viewUI(){$('#view').innerHTML='<div class="row"><b>Map view</b><button data-act="view" aria-label="Close">✕</button></div>'+`<label for="v_yields">Tile yields (Y) <select id="v_yields" data-v="yields">${['Off','My land','Whole map'].map((n,k)=>`<option value="${k}" ${(+V.yields||0)===k?'selected':''}>${n}</option>`).join('')}</select></label>`+VOPT.map(([k,n])=>`<label for="v_${k}"><input type="checkbox" id="v_${k}" data-v="${k}" ${V[k]?'checked':''}> ${n}</label>`).join('')+'<small>Left to right: food in green, production in orange, gold in yellow. Zeros are left blank. A selected settler always shows the yields around it.</small>'}
 function setV(k,val){V[k]=val==null?!V[k]:val;try{localStorage.setItem('meridian-view',JSON.stringify(V))}catch(e){}viewUI();dirty=true}
-document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.v;if(k)setV(k,e.target.tagName==='SELECT'?+e.target.value:e.target.checked)});
+document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.v;if(k)setV(k,e.target.tagName==='SELECT'?+e.target.value:e.target.checked);const k2=e.target.dataset&&e.target.dataset.s;if(k2)setupO[k2]=+e.target.value});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!b.disabled&&G)ACT[b.dataset.act](b.dataset.arg);else if(e.target.id==='modal'&&!askFns.length)closeModal()});
 function order(u,i){if(!findPath(u,i)){note('No route there. Closed borders, water or mountains block the way.')}else{u.goto=i;u.auto=false;u.explore=false;follow(u);if(u.mv<=0||u.goto!=null)selectNext(false)}}
 function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>wx>=l.x&&wx<=l.x+l.w&&wy>=l.y&&wy<=l.y+l.h),now=performance.now(),pp=pend;info=null;pend=null;
@@ -1344,14 +1424,14 @@ function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>
  cv.addEventListener('wheel',e=>{e.preventDefault();cam.z=Math.max(.35,Math.min(2,cam.z*(e.deltaY<0?1.12:.89)));dirty=miniDirty=true},{passive:false});
  cv.addEventListener('contextmenu',e=>e.preventDefault());
  mini.addEventListener('click',e=>{const b=mini.getBoundingClientRect(),s=mini.width/(G.W+.5)*(b.width/mini.width);cam.x=(e.clientX-b.left)/s*SQ*S0-SQ*S0/2;cam.y=(e.clientY-b.top)/(s*.87)*1.5*S0;dirty=miniDirty=true});
- addEventListener('keydown',e=>{if(!G||e.target.tagName==='SELECT')return;const k=e.key;if(!$('#modal').hidden){if(k==='Escape'&&!askFns.length)closeModal();return}
+ addEventListener('keydown',e=>{if(!G||e.target.tagName==='SELECT'||!$('#start').hidden)return;const k=e.key;if(!$('#modal').hidden){if(k==='Escape'&&!askFns.length)closeModal();return}
   const pan={ArrowLeft:[-80,0],ArrowRight:[80,0],ArrowUp:[0,-80],ArrowDown:[0,80],a:[-80,0],d:[80,0],w:[0,-80],s:[0,80]}[k];
   if(pan){cam.x+=pan[0]/cam.z;cam.y+=pan[1]/cam.z;dirty=miniDirty=true}else if(k==='Enter'){e.preventDefault();e.shiftKey?ACT.forceEnd():ACT.end()}else if(k===' '){e.preventDefault();ACT.skip()}
   else if(k==='f'){const u=selUnit();if(u&&u.own===0&&UNITS[u.type].str)ACT.fort()}else if(k==='n'){selectNext(true);ui()}else if(k==='y'||k==='g'||k==='r')k==='y'?setV('yields',((+V.yields||0)+1)%3):setV({g:'grid',r:'res'}[k]);else if(k==='Escape'){sel=null;pv=null;cityOpen=null;ui()}});
  addEventListener('resize',()=>{dirty=miniDirty=true})}
 
 /* ================= BOOT ================= */
-function boot(data){if(!(data&&data.G&&load(data.G))&&!load())newGame({nation:0,size:1,ai:3,diff:1});
+function boot(data){const hot=!!(data&&data.G&&load(data.G));hadSave=hot||load();if(!hadSave){newGame({...setupO});$('#toasts').innerHTML=''}if(!hot)showStart('home');
  const u=unitsOf(0).find(needsOrders);if(u&&!sel){sel=u.id}if(Math.min(innerWidth,innerHeight)<520)cam.z=.8;viewUI();ui();requestAnimationFrame(loop);if(G.over&&!G.cont)showOver()}
 window.DBG={get G(){return G},auto(n){G.autoplay=true;for(let k=0;k<n&&!(G.over&&!G.cont);k++){const h=human();if(h.alive){startTurn(h);aiTurn(h)}endTurn()}G.autoplay=false;updateVis();ui()}};
 try{window.claude?.hot?.snapshot(()=>({G:JSON.parse(ser())}))}catch(e){}
