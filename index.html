@@ -279,6 +279,42 @@ button.primary{box-shadow:0 3px 0 #b07d10;color:#3a2500}
 .yl div,.meter,.pv,select{border-radius:8px}
 .brand{font-weight:600;letter-spacing:.01em}
 #unit h3,#info h3,#city h2,.sheet h2,#bEnd{letter-spacing:.01em;font-weight:600}
+@media (max-height:520px){
+  body{font-size:13px}
+  #bar{padding-block:3px;gap:2px 10px;flex-wrap:nowrap}
+  .brand,.xl,#mini,#tip{display:none}
+  #stats{font-size:12px;gap:0 10px}
+  #bar nav{flex-wrap:nowrap;gap:4px}
+  #bar nav button{padding:3px 7px;font-size:12px}
+  #left{max-width:min(360px,48%)}
+  #unit,#info{padding:6px 9px}
+  #unit h3,#info h3{font-size:14px}
+  #unit .row button,#info .row button{padding:2px 8px}
+  #unit .meta,#info .meta{margin:1px 0 5px;font-size:12px}
+  #info .pv,.pv{font-size:12px;margin-bottom:5px}
+  .acts button{padding:4px 8px}
+  #dock{padding-bottom:6px;gap:8px}
+  #bEnd{padding:7px 14px;font-size:14px}
+  #bSub{padding:5px 9px}
+  #city{width:min(310px,100%);padding:8px 10px}
+  #city h2{font-size:17px}
+  #city h4,.sheet h4{margin:9px 0 4px}
+  #modal{padding:6px}
+  .sheet{padding:10px 14px}
+  .sheet h2{font-size:18px}
+  #view{top:4px;padding:6px 9px;gap:3px;max-height:calc(100% - 8px);overflow-y:auto}
+  .toast{font-size:12px;padding:3px 8px}
+  #toasts{max-width:42%}
+}
+.pv.promo{border-color:var(--brass)}.pv.promo .acts{margin-top:5px}.pv.promo small{color:var(--dim)}
+button{border-radius:10px;border-width:2px;font-weight:600;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+button.primary{box-shadow:0 3px 0 #b07d10;color:#3a2500}
+#unit,#info,#view,.sheet,.card,.toast,#tip,#mini{border-radius:12px}
+#unit,#info,#view,.sheet{border:2px solid var(--line);border-top:3px solid var(--brass)}
+#city{border-left:2px solid var(--line)}
+.yl div,.meter,.pv,select{border-radius:8px}
+.brand{font-weight:600;letter-spacing:.01em}
+#unit h3,#info h3,#city h2,.sheet h2,#bEnd{letter-spacing:.01em;font-weight:600}
 </style>
 
 <div id="app">
@@ -1120,7 +1156,7 @@ const ACT={
  sellTech(a){const[o,k]=deal(a),pr=Math.min(Math.floor(o.gold),Math.round(TECH[k].cost*.8));o.gold-=pr;human().gold+=pr;o.techs[k]=1;if(o.research===k)o.research=null;o.tt=G.turn;note('Sold '+TECH[k].n+' to '+o.name+' for '+pr+' gold.','good');ACT.diplo();ui()},
  menu(){modal(`<div class="row"><h2>Meridian Empires</h2><button data-act="close">✕</button></div>
   <p>Turn ${G.turn} of ${MAXT}. The game saves itself to this browser at the start of every turn.</p>
-  <h4>How to play</h4><p>Click a unit to select it. Click a tile to see the route and how many turns it takes, then click the same tile again (or press Move) to go. Click the selected unit again to deselect it. You can switch the confirm step off under View. Right-click (or double-tap) a tile to send the selected unit there even when one of your own units stands on it. One military unit and one civilian can share a tile. Drag to pan, scroll or pinch to zoom. Click a city's name plate to open it. Click a resource token for what it does, or any empty tile with nothing selected for its terrain details.</p>
+  <h4>How to play</h4><p>Click a unit to select it. Click a tile to see the route and how many turns it takes, then click the same tile again (or press Move) to go. Click the selected unit again to deselect it. You can switch the confirm step off under View. Right-click (or double-tap) a tile to send the selected unit there even when one of your own units stands on it. One military unit and one civilian can share a tile. Drag to pan, scroll or pinch to zoom. Click a city's name plate to open it. While a city screen is open the map takes no orders: a click on the map just closes it. Click a resource token for what it does, or any empty tile with nothing selected for its terrain details.</p>
   <p>Hover an enemy with a unit selected to see the odds. On a touch screen the first tap shows the odds and the second attacks. The View button toggles map layers: tile yields, resources, improvements, grid, and political or religion maps. Keys: Y yields, G grid, R resources, Enter ends the turn or jumps to the next unit, Space skips, F fortifies, Esc deselects.</p>
   <p>Units earn XP in combat and a promotion at 10, 30, 60, 100 and 150 XP: select the unit with the gold arrow over it and pick one, or heal 50 HP on the spot. Keep happiness at zero or better: luxuries, arenas, temples and theatres raise it, every city costs 3 and every two citizens cost 1. Roads and harbors link cities to your capital for gold. Caravans open trade routes. Shrines and temples make faith for a religion.</p>
   <p>Win by holding every original capital, launching a three-stage starship after Rocketry, or having the top score in ${yearOf(MAXT)}.</p>
@@ -1160,6 +1196,7 @@ document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.datase
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!b.disabled&&G)ACT[b.dataset.act](b.dataset.arg);else if(e.target.id==='modal'&&!askFns.length)closeModal()});
 function order(u,i){if(!findPath(u,i)){note('No route there. Closed borders, water or mountains block the way.')}else{u.goto=i;u.auto=false;follow(u);if(u.mv<=0||u.goto!=null)selectNext(false)}}
 function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>wx>=l.x&&wx<=l.x+l.w&&wy>=l.y&&wy<=l.y+l.h),now=performance.now(),pp=pend;info=null;pend=null;
+ if(cityOpen){const c=lb&&CM.get(lb.id);if(c&&c.own===0&&c.id!==cityOpen){sel=null;pv=null;openCity(c.id)}else{cityOpen=null;ui()}return}
  if(!lb&&!force&&i>=0&&human().seen[i]&&G.tiles[i].res&&V.res){const[c,r]=cr(i);if((wx-hx(c,r)+15)**2+(wy-hy(r)-13)**2<150){info=i;ui();return}}
  if(lb&&!force){const c=CM.get(lb.id);if(c.own===0){sel=null;pv=null;openCity(c.id)}else note(c.name+' · '+G.players[c.own].name+' · population '+c.pop+(c.rel!=null?' · '+G.rels[c.rel].name:''));ui();return}
  if(i<0||!human().seen[i]){sel=null;pv=null;ui();return}
