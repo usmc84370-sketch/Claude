@@ -679,6 +679,70 @@ button.big small{display:block;font:500 12.5px var(--body);opacity:.8}
   .panel{padding:10px 14px}.panel h2{font-size:18px}
   .nats{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
 }
+@media (max-height:520px){
+  body{font-size:13px}
+  #bar{padding-block:3px;gap:2px 10px;flex-wrap:nowrap}
+  .brand,.xl,#mini,#tip{display:none}
+  #stats{font-size:12px;gap:0 10px}
+  #bar nav{flex-wrap:nowrap;gap:4px}
+  #bar nav button{padding:3px 7px;font-size:12px}
+  #left{max-width:min(360px,48%)}
+  #unit,#info{padding:6px 9px}
+  #unit h3,#info h3{font-size:14px}
+  #unit .row button,#info .row button{padding:2px 8px}
+  #unit .meta,#info .meta{margin:1px 0 5px;font-size:12px}
+  #info .pv,.pv{font-size:12px;margin-bottom:5px}
+  .acts button{padding:4px 8px}
+  #dock{padding-bottom:6px;gap:8px}
+  #bEnd{padding:7px 14px;font-size:14px}
+  #bSub{padding:5px 9px}
+  #city{width:min(310px,100%);padding:8px 10px}
+  #city h2{font-size:17px}
+  #city h4,.sheet h4{margin:9px 0 4px}
+  #modal{padding:6px}
+  .sheet{padding:10px 14px}
+  .sheet h2{font-size:18px}
+  #view{top:4px;padding:6px 9px;gap:3px;max-height:calc(100% - 8px);overflow-y:auto}
+  .toast{font-size:12px;padding:3px 8px}
+  #toasts{max-width:42%}
+}
+.pv.promo{border-color:var(--brass)}.pv.promo .acts{margin-top:5px}.pv.promo small{color:var(--dim)}
+button{border-radius:10px;border-width:2px;font-weight:600;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+button.primary{box-shadow:0 3px 0 #b07d10;color:#3a2500}
+#unit,#info,#view,.sheet,.card,.toast,#tip,#mini{border-radius:12px}
+#unit,#info,#view,.sheet{border:2px solid var(--line);border-top:3px solid var(--brass)}
+#city{border-left:2px solid var(--line)}
+.yl div,.meter,.pv,select{border-radius:8px}
+.brand{font-weight:600;letter-spacing:.01em}
+#unit h3,#info h3,#city h2,.sheet h2,#bEnd{letter-spacing:.01em;font-weight:600}
+#app{position:relative}
+#start{position:absolute;inset:0;z-index:10;display:flex;align-items:flex-start;overflow-y:auto;background:radial-gradient(ellipse at 50% 30%,rgba(18,26,43,.7),rgba(9,13,24,.95));padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.hero{text-align:center;max-width:560px;margin:auto}
+.kick{color:var(--brass);font:600 13px var(--display);letter-spacing:.14em;text-transform:uppercase}
+.hero h1{font:700 clamp(38px,9vw,72px)/1 var(--display);margin:8px 0 12px;color:#fff;text-shadow:0 4px 0 #2b1c10,0 0 30px rgba(255,197,61,.35);text-wrap:balance}
+.hero p{color:var(--fg);margin:0 auto 22px;max-width:44ch;font-size:16px}
+.sbtn{display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto}
+button.big{padding:12px 18px;font:600 18px var(--display)}
+button.big small{display:block;font:500 12.5px var(--body);opacity:.8}
+.panel{background:var(--panel);border:2px solid var(--line);border-top:3px solid var(--brass);border-radius:14px;padding:16px 18px;max-width:880px;width:100%;margin:auto;min-width:0}
+.panel h2{margin:0 0 4px;font:600 24px var(--display)}
+.panel p{color:var(--dim);margin:6px 0;max-width:70ch}
+.panel h4{margin:12px 0 6px;font-size:11px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--dim)}
+.panel .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.nats{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.nat{text-align:left;background:transparent;display:block;border-left:7px solid var(--nc)}
+.nat.on{background:var(--panel2);border-color:var(--brass);border-left-color:var(--nc)}
+.nat em{display:block;font-style:normal;color:var(--brass);font-size:12.5px;margin:1px 0 2px}
+.nat small{display:block;color:var(--dim);font-weight:500;font-size:12px}
+.srow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 12px}
+@media (max-height:520px){
+  #start{padding-block:8px}
+  .hero h1{font-size:34px;margin:4px 0 6px}.hero p{margin-bottom:10px;font-size:14px}
+  .sbtn{flex-direction:row;max-width:none;justify-content:center;flex-wrap:wrap}
+  button.big{padding:7px 14px;font-size:15px}
+  .panel{padding:10px 14px}.panel h2{font-size:18px}
+  .nats{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+}
 </style>
 
 <div id="app">
@@ -741,8 +805,8 @@ const TECH={agriculture:T('Agriculture',0,0),pottery:T('Pottery',30,0,'agricultu
  combustion:T('Combustion',1500,5,'parts','electricity'),computers:T('Computers',1600,5,'electricity','biology'),rocketry:T('Rocketry',1900,5,'combustion','computers')};
 const TNOTE={seafaring:'Land units can embark onto coast',navigation:'Ships and embarked units cross ocean',biology:'Farms +1 food',industrialization:'Mines and lumber mills +1 production',rocketry:'Starship stages'};
 const U=(n,cls,cost,str,mv,tech,x={})=>({n,cls,cost,str,mv,tech,rs:0,rng:0,...x});
-const UNITS={settler:U('Settler','settler',80,0,2),worker:U('Worker','worker',50,0,2),caravan:U('Caravan','caravan',60,0,2,'husbandry'),missionary:U('Missionary','missionary',70,0,3,null,{needRel:1}),
- scout:U('Scout','scout',25,4,3),
+const UNITS={settler:U('Settler','settler',65,0,2),worker:U('Worker','worker',40,0,2),caravan:U('Caravan','caravan',60,0,2,'husbandry'),missionary:U('Missionary','missionary',70,0,3,null,{needRel:1}),
+ scout:U('Scout','scout',20,4,3),
  warrior:U('Warrior','melee',30,8,2,null,{up:'spearman'}),archer:U('Archer','ranged',40,5,2,'archery',{rs:7,rng:2,up:'crossbow'}),
  ballista:U('Ballista','siege',60,5,2,'bronze',{rs:8,rng:2,up:'catapult'}),
  spearman:U('Spearman','melee',50,11,2,'bronze',{up:'pikeman'}),horseman:U('Horseman','mounted',70,12,4,'riding',{res:'horses',up:'knight'}),
@@ -889,12 +953,12 @@ function connected(p){const key=G.turn+':'+G.roadVer+':'+G.cities.length,cc=conn
   if(cap.b.includes('harbor'))for(const c of G.cities)if(c.own===p&&c.b.includes('harbor'))set.add(c.id)}
  connC[p]={key,set};return set}
 function cityYields(c,hap){const pl=G.players[c.own],ctr=idx(c.c,c.r),harbor=c.b.includes('harbor'),w=FOCUS[c.focus||'bal'];if(hap==null)hap=happiness(pl);
- let y=tileYield(ctr,pl),f=Math.max(2,y.f),p=Math.max(1,y.p),g=Math.max(1,y.g),s=0,cu=1,fa=0;
+ let y=tileYield(ctr,pl),f=Math.max(2,y.f),p=Math.max(2,y.p),g=Math.max(1,y.g),s=0,cu=1,fa=0;
  const cand=[];for(const i of c.tiles){if(i===ctr||TERR[G.tiles[i].t].block)continue;const e=uAt.get(i);if(e&&atWar(e.own,c.own))continue;const t=tileYield(i,pl);if(harbor&&isWater(i))t.f++;t.i=i;cand.push(t)}
  const worked=[];let idle=0;
  for(let k=0;k<c.pop;k++){if(!cand.length){idle++;continue}const need=f-2*c.pop<1;let bi=0,bs=-1;
   cand.forEach((t,j)=>{const sc=t.f*(need?w.f+4:w.f)+t.p*w.p+t.g*w.g;if(sc>bs){bs=sc;bi=j}});const t=cand.splice(bi,1)[0];worked.push(t.i);f+=t.f;p+=t.p;g+=t.g}
- p+=idle;const cap=capOf(c.own)===c,conn=!cap&&connected(c.own).has(c.id);s+=c.pop+(cap?3:0);g+=Math.floor(c.pop/2)+(cap?3:0);if(cap){cu+=1;fa+=1}if(conn)g+=2+Math.floor(c.pop/4);
+ p+=idle;const cap=capOf(c.own)===c,conn=!cap&&connected(c.own).has(c.id);p+=1+(cap?2:0);s+=c.pop+(cap?3:0);g+=Math.floor(c.pop/2)+(cap?3:0);if(cap){cu+=1;fa+=1}if(conn)g+=2+Math.floor(c.pop/4);
  let pf=0,pp=0,pg=0,ps=0,maint=0;
  for(const b of c.b){const d=BLD[b]||WON[b];f+=d.f||0;p+=d.p||0;g+=d.g||0;s+=d.s||0;cu+=d.c||0;fa+=d.fa||0;pp+=d.pp||0;pg+=d.pg||0;ps+=d.ps||0;if(d.sciPop)s+=Math.floor(c.pop/2)*d.sciPop;if(BLD[b]&&b!=='monument'&&b!=='shrine')maint++}
  if(c.rel!=null){fa+=1;if(myFaith(c,'festival'))f+=2;if(myFaith(c,'cloisters'))s+=2;if(myFaith(c,'pageantry'))cu+=2}
@@ -911,8 +975,9 @@ function income(pl){let g=0,s=0,c=0,fa=0;const hap=happiness(pl);for(const ct of
 const policyCost=pl=>Math.round(20+18*Math.pow(pl.policies.length,1.7));
 const availTechs=pl=>Object.keys(TECH).filter(t=>!pl.techs[t]&&TECH[t].pre.every(p=>pl.techs[p]));
 const availPol=pl=>Object.keys(POL).filter(p=>!pl.policies.includes(p));
-function itemCost(pl,b){if(b.k==='u'){let c=UNITS[b.id].cost;if(b.id==='settler'&&pl.policies.includes('expansion'))c=Math.round(c*.7);return c}
- return b.k==='b'?BLD[b.id].cost:b.k==='w'?WON[b.id].cost:b.k==='x'?b.cost:700}
+const easeCost=c=>c<=100?c:Math.round((100+(c-100)*.75)/5)*5;
+function itemCost(pl,b){if(b.k==='u'){let c=easeCost(UNITS[b.id].cost);if(b.id==='settler'&&pl.policies.includes('expansion'))c=Math.round(c*.7);return c}
+ return b.k==='b'?easeCost(BLD[b.id].cost):b.k==='w'?Math.round(WON[b.id].cost*.75/5)*5:b.k==='x'?b.cost:600}
 const itemName=b=>b.k==='u'?UNITS[b.id].n:b.k==='b'?BLD[b.id].n:b.k==='w'?WON[b.id].n:b.k==='x'?'Wall upgrade':'Starship stage';
 function unitAvail(pl,id,res){const d=UNITS[id];return(!d.tech||pl.techs[d.tech])&&(!d.res||res[d.res])}
 function buildOptions(c){const pl=G.players[c.own],res=playerRes(pl.id),o=[],coastal=nbrI(idx(c.c,c.r)).some(isWater);
