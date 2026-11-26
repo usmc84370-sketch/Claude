@@ -83,6 +83,10 @@
     .bet{font-size:.8rem}
   }
   #bankBox{display:inline-block}
+  .drow{position:relative}
+  #deckInfo{position:absolute;right:0;top:0;display:flex;align-items:center;gap:5px;font-size:.85rem;opacity:.9}
+  #deckInfo i{width:13px;height:18px;border-radius:3px;border:1.5px solid #fff;
+    background:repeating-linear-gradient(45deg,#7a1f2b,#7a1f2b 3px,#5c1620 3px,#5c1620 6px);box-shadow:2px 2px 0 #fff6}
   @media (max-width:380px){main>header h1{display:none}}
   .tabs{margin-top:10px}
   .hand{background:#0004;border-radius:10px;padding:10px 12px;margin-top:8px}
@@ -129,7 +133,7 @@
 <main>
   <header><h1>3 CARD POKER</h1><button id="learnBtn" class="small">Learn</button><button id="statsBtn" class="alt small">Stats</button><span id="bankBox">$<b id="bank"></b></span></header>
   <div class="table">
-  <div class="label" id="dLabel">Dealer</div>
+  <div class="drow"><div class="label" id="dLabel">Dealer</div><span id="deckInfo"><i></i><b id="deckCount"></b></span></div>
   <div class="row" id="dealer"></div>
   <div id="msg">Pull a dial down to raise a bet, then deal.</div>
   <div class="row" id="player"></div>
@@ -153,6 +157,8 @@
     <p>Ante up (Pair Plus is optional), get three cards, then <b>Play</b> (bet equal to your ante) or <b>Fold</b>
     (lose ante and Pair Plus). Dealer needs Queen-high or better to qualify. If the dealer doesn't qualify, ante pays 1:1
     and the play bet pushes. If the dealer qualifies, the better hand wins ante and play at 1:1; ties push.</p>
+    <p><b>The deck:</b> cards come off one real 52-card deck, six a hand, and stay out until it's used up. The counter by the
+    dealer shows how many are left. When fewer than six remain, the leftovers are tossed and a fresh deck is shuffled.</p>
     <p>Hand ranks: straight flush &gt; three of a kind &gt; straight &gt; flush &gt; pair &gt; high card.</p>
     <table>
       <tr><th align="left">Hand</th><th>Pair Plus</th><th>Ante bonus</th></tr>
@@ -254,14 +260,50 @@ function five(hand) {
 function bestSix(cards) {
   return Math.max(...cards.map((_, i) => five(cards.filter((_, j) => j !== i))));
 }
-function deal() {
-  const deck = [];
-  for (let s = 0; s < 4; s++) for (let r = 2; r <= 14; r++) deck.push({ r, s });
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
+// Unbiased random integer in [0, n) from the browser's cryptographic generator.
+function randInt(n) {
+  if (!window.crypto || !crypto.getRandomValues) return Math.floor(Math.random() * n);
+  const buf = new Uint32Array(1), limit = 4294967296 - 4294967296 % n;
+  do crypto.getRandomValues(buf); while (buf[0] >= limit);   // reject the uneven tail so no card is favoured
+  return buf[0] % n;
+}
+// A full 52-card deck, Fisher-Yates shuffled: every one of the 52! orders is equally likely.
+function shuffled(rand = randInt) {
+  const d = [];
+  for (let s = 0; s < 4; s++) for (let r = 2; r <= 14; r++) d.push({ r, s });
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = rand(i + 1);
+    [d[i], d[j]] = [d[j], d[i]];
   }
-  return [deck.slice(0, 3), deck.slice(3, 6)];
+  return d;
+}
+// Throwaway deal for the quiz; never touches the game deck.
+function deal() {
+  const d = shuffled(n => Math.floor(Math.random() * n));
+  return [d.slice(0, 3), d.slice(3, 6)];
+}
+
+// The game deck: six cards come off the top each hand and stay gone until the deck runs out.
+let deck = [], deckNo = 0;
+try {
+  const o = JSON.parse(load('tcp-deck'));
+  const ids = o.d.filter(Number.isInteger);
+  if (o.n > 0 && ids.length === o.d.length && ids.length <= 52 && new Set(ids).size === ids.length && ids.every(x => x >= 0 && x < 52)) {
+    deckNo = o.n; deck = ids.map(x => ({ r: (x >> 2) + 2, s: x & 3 }));
+  }
+} catch (e) {}
+// Returns [player hand, dealer hand, whether a new deck was just opened].
+function draw() {
+  const fresh = deck.length < 6;   // leftovers that can't make a full hand are tossed
+  if (fresh) { deck = shuffled(); deckNo++; }
+  const cards = deck.splice(0, 6);
+  save('tcp-deck', JSON.stringify({ n: deckNo, d: deck.map(c => (c.r - 2) * 4 + c.s) }));
+  return [cards.slice(0, 3), cards.slice(3), fresh];
+}
+function deckUI(fresh) {
+  $('deckCount').textContent = deckNo ? deck.length : 52;
+  $('deckInfo').setAttribute('aria-label', `Deck ${deckNo || 1}, ${deckNo ? deck.length : 52} cards left`);
+  if (fresh) flash($('deckInfo'), 'pop');
 }
 
 // anim is 'deal' or 'flip'; each card starts 90ms after the one before it, offset by delay.
@@ -334,13 +376,15 @@ $('deal').onclick = () => {
   const need = ante * 2 + pp + six;
   if (need > bank) { say(`You need $${need} to cover every bet plus the play bet.`); return; }
   bank -= ante + pp + six;
-  [pHand, dHand] = deal();
+  let fresh;
+  [pHand, dHand, fresh] = draw();
+  deckUI(fresh);
   inHand = true;
   $('player').classList.remove('win');
   show($('player'), pHand, false, 'deal'); show($('dealer'), dHand, true, 'deal', 270);
   $('pLabel').textContent = 'You: ' + NAMES[evaluate(pHand)[0]];
   $('dLabel').textContent = 'Dealer';
-  say(`Play for $${ante} or fold?`);
+  say((fresh && deckNo > 1 ? 'New deck shuffled.\n' : '') + `Play for $${ante} or fold?`);
   ui();
 };
 
@@ -464,7 +508,7 @@ function working() {
     <br><b>Dealer:</b> qualified ${pct(st.dq, st.hands)} of the time (normal is 69.6%)`
     + (st.dec ? `<br><b>Your calls:</b> ${st.dec - st.loose - st.tight} of ${st.dec} matched basic strategy (play Q-6-4 or better, fold the rest).`
       + (st.loose || st.tight ? ` You played ${st.loose} weak hand${st.loose === 1 ? '' : 's'} and folded ${st.tight} good one${st.tight === 1 ? '' : 's'}; that part is on you, not luck.` : '') : '')
-    + `<br><small>All of this describes hands already played. The deck is reshuffled every hand, so a hot or cold run says nothing about the next one.</small></div>`;
+    + `<br><small>All of this describes hands already played. A hot or cold run doesn't carry over: dealt cards only stay out until the deck runs out, and then it's a fresh shuffle.</small></div>`;
   return h;
 }
 function renderStats() {
@@ -651,6 +695,7 @@ dial('ante', [5, 10, 25, 50, 100]);
 dial('pp', [0, 5, 10, 25, 50, 100]);
 dial('six', [0, 5, 10, 25, 50, 100]);
 $('dealer').innerHTML = $('player').innerHTML = SLOTS;
+deckUI();
 ui();
 </script>
 </body>
