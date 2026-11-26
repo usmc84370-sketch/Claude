@@ -50,9 +50,12 @@ button.warn{border-color:var(--bad);color:var(--bad)}
 #dock{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;pointer-events:none;
   padding-bottom:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 #dock>*{pointer-events:auto}
-#unit{background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--brass);padding:9px 11px;min-width:0;max-width:430px}
-#unit h3{margin:0;font:16px var(--display);letter-spacing:.03em}
-#unit .meta{color:var(--dim);font-size:12.5px;margin:2px 0 7px}
+#left{display:flex;flex-direction:column;gap:8px;min-width:0;max-width:430px}
+#info .pv{margin:0;line-height:1.45}
+#view select{width:auto;padding:3px 5px;margin-left:auto}
+#unit,#info{background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--brass);padding:9px 11px;min-width:0;max-width:430px}
+#unit h3,#info h3{margin:0;font:16px var(--display);letter-spacing:.03em}
+#unit .meta,#info .meta{color:var(--dim);font-size:12.5px;margin:2px 0 7px}
 .pv{background:var(--panel2);border-left:3px solid var(--bad);padding:4px 8px;margin-bottom:7px;font-size:13px}
 .card{border:1px solid var(--line);border-radius:4px;padding:9px 10px;margin-top:8px}
 .acts{display:flex;flex-wrap:wrap;gap:5px}
@@ -92,7 +95,7 @@ select{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid va
 .tw{overflow-x:auto}
 @media (max-width:640px){
   .brand{font-size:15px}#mini{display:none}
-  #dock{flex-direction:column-reverse;align-items:stretch}#right{align-items:flex-end}#unit{max-width:none}
+  #dock{flex-direction:column-reverse;align-items:stretch}#right{align-items:flex-end}#left,#unit,#info{max-width:none}
   #city{top:auto;height:62%;width:100%;border-left:0;border-top:2px solid var(--brass)}
   #tip{display:none}
 }
@@ -118,7 +121,7 @@ select{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid va
     <div id="view" hidden></div>
     <aside id="city" hidden></aside>
     <div id="dock">
-      <div id="unit" hidden></div>
+      <div id="left"><div id="info" hidden></div><div id="unit" hidden></div></div>
       <div id="right">
         <canvas id="mini"></canvas>
         <div id="turnbox"><button id="bSub" data-act="forceEnd" hidden>End turn</button><button id="bEnd" class="primary" data-act="end">End turn</button></div>
@@ -197,6 +200,10 @@ const FOCUS={bal:{n:'Balanced',f:3,p:3,g:1.5},food:{n:'Food',f:5,p:1.5,g:1},prod
 /* ================= STATE + HELPERS ================= */
 let G=null,uAt=new Map(),cAt=new Map(),CM=new Map(),vis=null,sel=null,cityOpen=null,cam={x:0,y:0,z:1},fxs=[],labels=[],dirty=true,miniDirty=true,asks=[],askFns=[],reachC=null,pv=null,animUntil=0,connC={},lastTap=null;
 let V={yields:false,res:true,imp:true,feat:true,grid:true,tint:true,pol:false,rel:false,routes:true};try{Object.assign(V,JSON.parse(localStorage.getItem('meridian-view')||'{}'))}catch(e){}
+let info=null;
+const RDESC={wheat:'A staple grain that feeds a growing city.',cattle:'Herds that give a city meat and hides.',fish:'Rich fishing waters off the coast.',stone:'Building stone that speeds up construction.',
+ horses:'Wild herds your people can tame for mounted troops.',iron:'Ore for blades and armor.',gems:'Precious stones your people prize.',wine:'Vineyards whose vintages keep citizens cheerful.',
+ spices:'Rare seasonings worth their weight in gold.',silk:'Fine thread for luxury cloth.',silver:'A soft precious metal for coin and ornament.'};
 const $=s=>document.querySelector(s);
 const R=(a,b)=>a+Math.random()*(b-a),RI=n=>Math.floor(Math.random()*n),pick=a=>a[RI(a.length)];
 const idx=(c,r)=>r*G.W+c,cr=i=>[i%G.W,(i/G.W)|0],inb=(c,r)=>c>=0&&r>=0&&c<G.W&&r<G.H;
@@ -688,11 +695,15 @@ function render(){const dpr=Math.min(2,window.devicePixelRatio||1),w=cv.clientWi
   for(let d=0;d<6;d++){const n=nb(c,r,d);if(n&&ownerOf(idx(n[0],n[1]))===o)continue;const[a,b]=EDGE[d];for(const[col,lw]of[['rgba(0,0,0,.45)',5.5],[G.players[o].color,3.4]]){x.strokeStyle=col;x.lineWidth=lw;x.beginPath();x.moveTo(X+COR[a][0]*.9,Y+COR[a][1]*.9);x.lineTo(X+COR[b][0]*.9,Y+COR[b][1]*.9);x.stroke()}}}
  /* trade routes */
  x.setLineDash([3,7]);x.lineWidth=2.6;for(const rt of G.routes){const a=CM.get(rt.a),b=CM.get(rt.b);if(!V.routes||!a||!b||!seen[idx(a.c,a.r)]||!seen[idx(b.c,b.r)])continue;x.strokeStyle=rt.own===0?'#ffd978':'rgba(255,240,200,.55)';x.lineDashOffset=-now/90;x.beginPath();x.moveTo(hx(a.c,a.r),hy(a.r));x.lineTo(hx(b.c,b.r),hy(b.r));x.stroke()}x.setLineDash([]);
- {const mine=oc&&oc.own===0,wk=mine?new Set(cityYields(oc).worked):null,list=[];
-  if(V.yields&&z>=.5){for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r);if(seen[i]&&!G.tiles[i].city&&G.tiles[i].t!=='mountain')list.push(i)}}else if(mine)for(const i of oc.tiles)if(!G.tiles[i].city)list.push(i);
-  x.font='600 11px Barlow,sans-serif';x.textAlign='center';x.textBaseline='middle';
-  for(const i of list){const[c,r]=cr(i),ty=tileYield(i,human()),X=hx(c,r),Y=hy(r)-20;x.fillStyle='rgba(10,14,20,.72)';x.fillRect(X-19,Y-7,38,14);
-   [['#8fd985',ty.f,-12],['#f0a960',ty.p,0],['#ffd978',ty.g,12]].forEach(([col,n,dx])=>{x.fillStyle=n?col:'rgba(255,255,255,.28)';x.fillText(n,X+dx,Y+.5)});if(wk&&wk.has(i)){x.strokeStyle='#fff';x.lineWidth=2;x.strokeRect(X-19,Y-7,38,14)}}}
+ {const mine=oc&&oc.own===0,wk=mine?new Set(cityYields(oc).worked):null,list=new Set(),ym=+V.yields||0;
+  if(ym&&z>=.5)for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r);if(seen[i]&&(ym===2||ownerOf(i)===0))list.add(i)}
+  if(su&&su.own===0&&su.type==='settler')for(const i of within(su.c,su.r,2))if(seen[i])list.add(i);
+  if(mine)for(const i of oc.tiles)list.add(i);
+  x.font='700 11.5px Barlow,sans-serif';x.textAlign='center';x.textBaseline='middle';x.lineJoin='round';
+  for(const i of list){const t=G.tiles[i];if(t.city||t.t==='mountain')continue;const[c,r]=cr(i),ty=tileYield(i,human()),X=hx(c,r),Y=hy(r)-21,ps=[['#7dff6a',ty.f,-11],['#ff9a3d',ty.p,0],['#ffe04a',ty.g,11]].filter(q=>q[1]);
+   x.lineWidth=3;x.strokeStyle='rgba(8,12,16,.85)';ps.forEach(([col,n,dx])=>{const px=X+dx;x.strokeText(n,px,Y);x.fillStyle=col;x.fillText(n,px,Y)});
+   if(wk&&wk.has(i)){x.strokeStyle='#fff';x.lineWidth=1.8;x.beginPath();x.moveTo(X-16,Y+8);x.lineTo(X+16,Y+8);x.stroke()}}}
+ if(info!=null){const[c,r]=cr(info);hexPath(x,hx(c,r),hy(r),CB);x.strokeStyle='#fff';x.lineWidth=2.5;x.stroke()}
  if(su&&su.own===0){if(!reachC||reachC.id!==su.id||reachC.k!==su.c+','+su.r+','+su.mv)reachC={id:su.id,k:su.c+','+su.r+','+su.mv,m:reach(su)};
   for(const i of reachC.m.keys()){const[c,r]=cr(i);hexPath(x,hx(c,r),hy(r),CB);x.fillStyle='rgba(255,255,255,.2)';x.fill()}
   if(su.mv>0)for(const i of within(su.c,su.r,UNITS[su.type].rng||1)){if(!vis[i]||!canAttack(su,i))continue;const e=enemyAt(i,0);if(!e||!atWar(0,e.own))continue;const[c,r]=cr(i);hexPath(x,hx(c,r),hy(r),CB);x.strokeStyle='#ff5a4a';x.lineWidth=3.5;x.stroke()}
@@ -751,7 +762,16 @@ function ui(){if(!G)return;const h=human(),inc=income(h),sg=n=>(n>=0?'+':'')+n;
   <div class="meta">${esc(G.players[u.own].name)} · HP ${Math.round(u.hp)} · ${d.str?'strength '+d.str+(d.rs?' / ranged '+d.rs:'')+' · ':''}moves ${mine?Math.max(0,Math.ceil(u.mv))+'/':''}${d.mv}${st?' · '+st:''}</div>
   ${pv&&mine?`<div class="pv">${esc(pv.txt)}</div>`:''}<div class="acts">${b.join('')}</div>`;box.hidden=false}
  else box.hidden=true;
+ const ib=$('#info');if(info!=null){ib.innerHTML=infoHTML(info);ib.hidden=false}else ib.hidden=true;
  renderCity();dirty=true}
+function infoHTML(i){const t=G.tiles[i],Tt=TERR[t.t],h=human(),y=tileYield(i,h),o=ownerOf(i),yl=d=>[d.f&&'+'+d.f+' food',d.p&&'+'+d.p+' production',d.g&&'+'+d.g+' gold'].filter(Boolean).join(', ');
+ let s=`<div class="row"><h3>${Tt.n}${t.h?' hills':''}${t.f?' forest':''}</h3><button data-act="closeInfo" aria-label="Close">✕</button></div>
+ <div class="meta">${y.f} food · ${y.p} production · ${y.g} gold · ${o>=0?esc(G.players[o].name):'unclaimed'}${Tt.block?' · impassable':Tt.water?'':t.h||t.f?' · 2 moves to enter, +25% defense':' · 1 move to enter'}${t.road?' · road':''}${t.imp?' · '+IMP[t.imp].n.toLowerCase():''}</div>`;
+ if(t.res){const k=t.res,r=RES[k],m=r.imp&&IMP[r.imp],us=Object.values(UNITS).filter(u=>u.res===k).map(u=>u.n).join(', ');
+  s+=`<div class="pv" style="border-color:${r.col}"><b>${r.n}</b> · ${r.strat?'strategic resource':r.lux?'luxury resource':'bonus resource'}<br>${RDESC[k]} This tile gets ${yl(r)}.`+
+  (r.strat?`<br>Having it inside your borders lets you build ${us}.`:'')+(r.lux?'<br>Each different luxury inside your borders gives +4 happiness. A spare source can be sold to a rival.':'')+
+  (m?`<br>${t.imp===r.imp?'The '+m.n.toLowerCase()+' here adds':'A worker can build a '+m.n.toLowerCase()+' here for'} ${yl(m)}${m.tech&&!h.techs[m.tech]?' (needs '+TECH[m.tech].n+' first)':''}.`:k==='fish'?'<br>Needs no improvement. A Harbor adds +1 food to every water tile.':'')+'</div>'}
+ return s}
 function openCity(id){cityOpen=id;ui()}
 function renderCity(){const el=$('#city'),c=cityOpen&&CM.get(cityOpen);if(!c||c.own!==0){el.hidden=true;cityOpen=null;return}const pl=human(),y=cityYields(c),need=growNeed(c.pop),hap=happiness(pl);
  const gt=y.surplus>0?Math.ceil((need-c.food)/Math.max(1,hap<0?Math.floor(y.surplus/3):y.surplus))+' turns to grow'+(hap<0?' (slowed by unhappiness)':''):y.surplus<0?'starving':'not growing';
@@ -808,7 +828,7 @@ const ACT={
  sellTech(a){const[o,k]=deal(a),pr=Math.min(Math.floor(o.gold),Math.round(TECH[k].cost*.8));o.gold-=pr;human().gold+=pr;o.techs[k]=1;if(o.research===k)o.research=null;o.tt=G.turn;note('Sold '+TECH[k].n+' to '+o.name+' for '+pr+' gold.','good');ACT.diplo();ui()},
  menu(){modal(`<div class="row"><h2>Meridian Empires</h2><button data-act="close">✕</button></div>
   <p>Turn ${G.turn} of ${MAXT}. The game saves itself to this browser at the start of every turn.</p>
-  <h4>How to play</h4><p>Click a unit to select it, then click a tile to move or an enemy to attack. Right-click (or double-tap) a tile to send the selected unit there even when one of your own units stands on it. One military unit and one civilian can share a tile. Drag to pan, scroll or pinch to zoom. Click a city's name plate to open it.</p>
+  <h4>How to play</h4><p>Click a unit to select it, then click a tile to move or an enemy to attack. Right-click (or double-tap) a tile to send the selected unit there even when one of your own units stands on it. One military unit and one civilian can share a tile. Drag to pan, scroll or pinch to zoom. Click a city's name plate to open it. Click a resource token for what it does, or any empty tile with nothing selected for its terrain details.</p>
   <p>Hover an enemy with a unit selected to see the odds. On a touch screen the first tap shows the odds and the second attacks. The View button toggles map layers: tile yields, resources, improvements, grid, and political or religion maps. Keys: Y yields, G grid, R resources, Enter ends the turn or jumps to the next unit, Space skips, F fortifies, Esc deselects.</p>
   <p>Keep happiness at zero or better: luxuries, arenas, temples and theatres raise it, every city costs 3 and every two citizens cost 1. Roads and harbors link cities to your capital for gold. Caravans open trade routes. Shrines and temples make faith for a religion.</p>
   <p>Win by holding every original capital, launching a three-stage starship after Rocketry, or having the top score in ${yearOf(MAXT)}.</p>
@@ -820,7 +840,7 @@ const ACT={
   <label class="f" for="sAi">Rival nations</label><select id="sAi"><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
   <label class="f" for="sDiff">Difficulty</label><select id="sDiff"><option value="0">Settler: rivals build and research slower</option><option value="1" selected>Captain: even footing</option><option value="2">Warlord: rivals build and research faster</option></select>
   <div class="foot"><button data-act="close">Cancel</button><button class="primary" data-act="start">Start</button></div>`)},
- start(){const o={nation:+$('#sNat').value,size:+$('#sSize').value,ai:+$('#sAi').value,diff:+$('#sDiff').value};$('#modal').hidden=true;asks=[];askFns=[];$('#toasts').innerHTML='';newGame(o);save();ui()},
+ start(){const o={nation:+$('#sNat').value,size:+$('#sSize').value,ai:+$('#sAi').value,diff:+$('#sDiff').value};$('#modal').hidden=true;asks=[];askFns=[];$('#toasts').innerHTML='';info=null;newGame(o);save();ui()},
  cont(){G.cont=true;closeModal();ui()},close(){closeModal()},
  ask(i){const fn=askFns[+i];askFns=[];$('#modal').hidden=true;fn&&fn();nextAsk();ui()},
  closeCity(){cityOpen=null;ui()},
@@ -837,15 +857,16 @@ const ACT={
  skip(){const u=selUnit();if(u){u.skip=true;if(!selectNext(true))sel=null}ui()},
  upgrade(){const u=selUnit();if(u)doUpgrade(u);ui()},
  disband(){const u=selUnit();if(u&&u.own===0)ask(`<h2>Disband this ${UNITS[u.type].n}?</h2><p>The unit is removed for good.</p>`,[['Keep it',()=>{}],['Disband',()=>{kill(u);checkElim(0)},'warn']]);},
- view(){const v=$('#view');v.hidden=!v.hidden},
+ view(){const v=$('#view');v.hidden=!v.hidden},closeInfo(){info=null;ui()},
  desel(){sel=null;pv=null;ui()}};
-const VOPT=[['yields','Tile yields (Y)'],['res','Resources (R)'],['imp','Improvements'],['feat','Terrain art'],['grid','Hex grid (G)'],['tint','Territory tint'],['pol','Political map'],['rel','Religion map'],['routes','Trade routes']];
-function viewUI(){$('#view').innerHTML='<div class="row"><b>Map view</b><button data-act="view" aria-label="Close">✕</button></div>'+VOPT.map(([k,n])=>`<label for="v_${k}"><input type="checkbox" id="v_${k}" data-v="${k}" ${V[k]?'checked':''}> ${n}</label>`).join('')+'<small>Yields read food, production, gold.</small>'}
+const VOPT=[['res','Resources (R)'],['imp','Improvements'],['feat','Terrain art'],['grid','Hex grid (G)'],['tint','Territory tint'],['pol','Political map'],['rel','Religion map'],['routes','Trade routes']];
+function viewUI(){$('#view').innerHTML='<div class="row"><b>Map view</b><button data-act="view" aria-label="Close">✕</button></div>'+`<label for="v_yields">Tile yields (Y) <select id="v_yields" data-v="yields">${['Off','My land','Whole map'].map((n,k)=>`<option value="${k}" ${(+V.yields||0)===k?'selected':''}>${n}</option>`).join('')}</select></label>`+VOPT.map(([k,n])=>`<label for="v_${k}"><input type="checkbox" id="v_${k}" data-v="${k}" ${V[k]?'checked':''}> ${n}</label>`).join('')+'<small>Left to right: food in green, production in orange, gold in yellow. Zeros are left blank. A selected settler always shows the yields around it.</small>'}
 function setV(k,val){V[k]=val==null?!V[k]:val;try{localStorage.setItem('meridian-view',JSON.stringify(V))}catch(e){}viewUI();dirty=true}
-document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.v;if(k)setV(k,e.target.checked)});
+document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.v;if(k)setV(k,e.target.tagName==='SELECT'?+e.target.value:e.target.checked)});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!b.disabled&&G)ACT[b.dataset.act](b.dataset.arg);else if(e.target.id==='modal'&&!askFns.length)closeModal()});
 function order(u,i){if(!findPath(u,i)){note('No route there. Closed borders, water or mountains block the way.')}else{u.goto=i;u.auto=false;follow(u);if(u.mv<=0||u.goto!=null)selectNext(false)}}
-function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>wx>=l.x&&wx<=l.x+l.w&&wy>=l.y&&wy<=l.y+l.h),now=performance.now();
+function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>wx>=l.x&&wx<=l.x+l.w&&wy>=l.y&&wy<=l.y+l.h),now=performance.now();info=null;
+ if(!lb&&!force&&i>=0&&human().seen[i]&&G.tiles[i].res&&V.res){const[c,r]=cr(i);if((wx-hx(c,r)+15)**2+(wy-hy(r)-13)**2<150){info=i;ui();return}}
  if(lb&&!force){const c=CM.get(lb.id);if(c.own===0){sel=null;pv=null;openCity(c.id)}else note(c.name+' · '+G.players[c.own].name+' · population '+c.pop+(c.rel!=null?' · '+G.rels[c.rel].name:''));ui();return}
  if(i<0||!human().seen[i]){sel=null;pv=null;ui();return}
  const dbl=touch&&lastTap&&lastTap.i===i&&now-lastTap.t<450?lastTap.u:null;
@@ -858,7 +879,7 @@ function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>
  if(own.length&&vis[i]&&!force){const k=own.findIndex(o=>u&&o.id===u.id);if(k>=0&&k===own.length-1&&city&&city.own===0){sel=null;openCity(city.id)}else{const n=own[(k+1)%own.length];sel=n.id;n.sleep=false;n.fort=false;cityOpen=null}ui();return}
  if(!mine&&city&&city.own===0){openCity(city.id);return}
  if(mine){if(idx(u.c,u.r)!==i)order(u,i);ui();return}
- const here=uAt.get(i)||cAt.get(i);if(here&&vis[i]){sel=here.id}else{sel=null;cityOpen=null}ui()}
+ const here=uAt.get(i)||cAt.get(i);if(here&&vis[i]){sel=here.id}else{sel=null;cityOpen=null;info=i}ui()}
 /* pointer + keys */
 {const P=new Map();let moved=0,pd=0,hov=-1;
  cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);P.set(e.pointerId,[e.clientX,e.clientY]);if(P.size===1)moved=0;else pd=0});
@@ -876,7 +897,7 @@ function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>
  addEventListener('keydown',e=>{if(!G||e.target.tagName==='SELECT')return;const k=e.key;if(!$('#modal').hidden){if(k==='Escape'&&!askFns.length)closeModal();return}
   const pan={ArrowLeft:[-80,0],ArrowRight:[80,0],ArrowUp:[0,-80],ArrowDown:[0,80],a:[-80,0],d:[80,0],w:[0,-80],s:[0,80]}[k];
   if(pan){cam.x+=pan[0]/cam.z;cam.y+=pan[1]/cam.z;dirty=miniDirty=true}else if(k==='Enter'){e.preventDefault();e.shiftKey?ACT.forceEnd():ACT.end()}else if(k===' '){e.preventDefault();ACT.skip()}
-  else if(k==='f'){const u=selUnit();if(u&&u.own===0&&UNITS[u.type].str)ACT.fort()}else if(k==='n'){selectNext(true);ui()}else if(k==='y'||k==='g'||k==='r')setV({y:'yields',g:'grid',r:'res'}[k]);else if(k==='Escape'){sel=null;pv=null;cityOpen=null;ui()}});
+  else if(k==='f'){const u=selUnit();if(u&&u.own===0&&UNITS[u.type].str)ACT.fort()}else if(k==='n'){selectNext(true);ui()}else if(k==='y'||k==='g'||k==='r')k==='y'?setV('yields',((+V.yields||0)+1)%3):setV({g:'grid',r:'res'}[k]);else if(k==='Escape'){sel=null;pv=null;cityOpen=null;ui()}});
  addEventListener('resize',()=>{dirty=miniDirty=true})}
 
 /* ================= BOOT ================= */
