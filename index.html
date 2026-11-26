@@ -315,6 +315,42 @@ button.primary{box-shadow:0 3px 0 #b07d10;color:#3a2500}
 .yl div,.meter,.pv,select{border-radius:8px}
 .brand{font-weight:600;letter-spacing:.01em}
 #unit h3,#info h3,#city h2,.sheet h2,#bEnd{letter-spacing:.01em;font-weight:600}
+@media (max-height:520px){
+  body{font-size:13px}
+  #bar{padding-block:3px;gap:2px 10px;flex-wrap:nowrap}
+  .brand,.xl,#mini,#tip{display:none}
+  #stats{font-size:12px;gap:0 10px}
+  #bar nav{flex-wrap:nowrap;gap:4px}
+  #bar nav button{padding:3px 7px;font-size:12px}
+  #left{max-width:min(360px,48%)}
+  #unit,#info{padding:6px 9px}
+  #unit h3,#info h3{font-size:14px}
+  #unit .row button,#info .row button{padding:2px 8px}
+  #unit .meta,#info .meta{margin:1px 0 5px;font-size:12px}
+  #info .pv,.pv{font-size:12px;margin-bottom:5px}
+  .acts button{padding:4px 8px}
+  #dock{padding-bottom:6px;gap:8px}
+  #bEnd{padding:7px 14px;font-size:14px}
+  #bSub{padding:5px 9px}
+  #city{width:min(310px,100%);padding:8px 10px}
+  #city h2{font-size:17px}
+  #city h4,.sheet h4{margin:9px 0 4px}
+  #modal{padding:6px}
+  .sheet{padding:10px 14px}
+  .sheet h2{font-size:18px}
+  #view{top:4px;padding:6px 9px;gap:3px;max-height:calc(100% - 8px);overflow-y:auto}
+  .toast{font-size:12px;padding:3px 8px}
+  #toasts{max-width:42%}
+}
+.pv.promo{border-color:var(--brass)}.pv.promo .acts{margin-top:5px}.pv.promo small{color:var(--dim)}
+button{border-radius:10px;border-width:2px;font-weight:600;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+button.primary{box-shadow:0 3px 0 #b07d10;color:#3a2500}
+#unit,#info,#view,.sheet,.card,.toast,#tip,#mini{border-radius:12px}
+#unit,#info,#view,.sheet{border:2px solid var(--line);border-top:3px solid var(--brass)}
+#city{border-left:2px solid var(--line)}
+.yl div,.meter,.pv,select{border-radius:8px}
+.brand{font-weight:600;letter-spacing:.01em}
+#unit h3,#info h3,#city h2,.sheet h2,#bEnd{letter-spacing:.01em;font-weight:600}
 </style>
 
 <div id="app">
@@ -1077,7 +1113,7 @@ function ui(){if(!G)return;if(pend&&pend.u!==sel)pend=null;const h=human(),inc=i
  $('#bTech').classList.toggle('need',!h.research&&availTechs(h).length>0);$('#bPol').classList.toggle('need',h.culture>=policyCost(h)&&availPol(h).length>0);$('#bRel').classList.toggle('need',canFoundRel(h));
  const p=pending();$('#bEnd').textContent=p.l;$('#bSub').hidden=!p.soft;
  const u=selUnit(),box=$('#unit');
- if(u&&vis[idx(u.c,u.r)]){const d=UNITS[u.type],mine=u.own===0,b=[];
+ if(u&&vis[idx(u.c,u.r)]&&!(cityOpen&&CM.get(cityOpen)&&CM.get(cityOpen).own===0)){const d=UNITS[u.type],mine=u.own===0,b=[];
   if(mine){const can=u.mv>0;if(u.type==='settler')b.push(`<button class="primary" data-act="found" ${can&&canFound(u)?'':'disabled'}>Found city</button>`);
    if(u.type==='worker'){const m=canImprove(u);b.push(`<button class="primary" data-act="improve" ${can&&m?'':'disabled'}>${m?'Build '+IMP[m].n.toLowerCase():'Nothing to improve here'}</button><button data-act="road" ${can&&canRoad(u)?'':'disabled'}>Build road</button><button data-act="auto">${u.auto?'Stop automating':'Automate'}</button>`)}
    if(u.type==='caravan'){const c=canTrade(u);b.push(`<button class="primary" data-act="trade" ${c?'':'disabled'}>${c?'Open trade route with '+esc(c.name)+' (+'+routeGold(h,homeOf(u),c)+' gold)':G.routes.filter(r=>r.own===0).length>=routeCap(h)?'All '+routeCap(h)+' trade routes in use':'Move next to another city to trade'}</button>`)}
@@ -1090,7 +1126,7 @@ function ui(){if(!G)return;if(pend&&pend.u!==sel)pend=null;const h=human(),inc=i
   <div class="meta">${esc(G.players[u.own].name)} · HP ${Math.round(u.hp)} · ${d.str?'strength '+d.str+(d.rs?' / ranged '+d.rs:'')+' · ':''}moves ${mine?Math.max(0,Math.ceil(u.mv))+'/':''}${mvOf(u)}${st?' · '+st:''}${d.str?' · XP '+u.xp:''}${promoList(u)?'<br>Promotions: '+promoList(u):''}</div>
   ${pv&&mine?`<div class="pv">${esc(pv.txt)}</div>`:''}${pend&&mine?`<div class="pv promo">Move here? It takes about ${pend.t} turn${pend.t>1?'s':''}. Tap the same tile again to go.<div class="acts"><button class="primary" data-act="go">Move</button><button data-act="cancelMove">Cancel</button></div></div>`:''}${mine&&pendingPromo(u)>0?`<div class="pv promo"><b>Promotion earned.</b> Pick one:<div class="acts">${promoOpts(u).map(k=>`<button data-act="promo" data-arg="${k}"><b>${PROMO[k].n}${(u.pr&&u.pr[k])?' II':''}</b> <small>${PROMO[k].d}</small></button>`).join('')}<button data-act="promo" data-arg="heal"><b>Field medic</b> <small>Heal 50 HP now instead</small></button></div></div>`:''}<div class="acts">${b.join('')}</div>`;box.hidden=false}
  else box.hidden=true;
- const ib=$('#info');if(info!=null){ib.innerHTML=infoHTML(info);ib.hidden=false}else ib.hidden=true;
+ const ib=$('#info');if(info!=null&&!cityOpen){ib.innerHTML=infoHTML(info);ib.hidden=false}else ib.hidden=true;
  renderCity();dirty=true}
 function infoHTML(i){const t=G.tiles[i],Tt=TERR[t.t],h=human(),y=tileYield(i,h),o=ownerOf(i),yl=d=>[d.f&&'+'+d.f+' food',d.p&&'+'+d.p+' production',d.g&&'+'+d.g+' gold'].filter(Boolean).join(', ');
  let s=`<div class="row"><h3>${Tt.n}${t.h?' hills':''}${t.f?' forest':''}</h3><button data-act="closeInfo" aria-label="Close">✕</button></div>
