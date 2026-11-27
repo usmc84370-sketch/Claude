@@ -175,6 +175,25 @@ button.big small{display:block;font:500 12.5px var(--body);opacity:.8}
   #toasts{max-width:80%}
 }
 .toast.go{pointer-events:auto;cursor:pointer}.toast.go::after{content:' ›';font-weight:800;color:var(--brass)}
+#modebar{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:4;background:var(--panel);border:2px solid var(--bad);border-radius:12px;padding:6px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 24px);font-size:13px}
+.tgt{display:flex;gap:9px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line);cursor:pointer}.tgt input{width:18px;height:18px;accent-color:var(--bad);margin:0}
+#bNuke{border-color:var(--bad);color:var(--bad)}
+#stats span{background:var(--panel2);border-radius:999px;padding:2px 10px;white-space:nowrap}
+#stats span .xl{background:none;padding:0}
+#pt{width:46px;height:46px;background:var(--panel2);border-radius:12px;flex:none;border:2px solid var(--line)}
+#bEnd.ready{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 3px 0 #b07d10,0 0 0 6px rgba(255,197,61,.28)}}
+@media (prefers-reduced-motion:reduce){#bEnd.ready{animation:none}}
+@media (pointer:coarse){button{min-height:36px}#bar nav button{min-height:32px}.opt,.tech,.nat{min-height:44px}}
+details summary{cursor:pointer;color:var(--dim);font-weight:700}
+@media (max-width:640px){
+  #unit{max-height:44vh}
+  #unit>.acts{flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px;-webkit-overflow-scrolling:touch}
+  #unit>.acts button{flex:none}
+  #unit .meta{max-height:4.1em;overflow:hidden}
+  #pt{width:38px;height:38px}
+  #stats span{padding:1px 8px}
+}
 </style>
 
 <div id="app">
@@ -186,6 +205,7 @@ button.big small{display:block;font:500 12.5px var(--body);opacity:.8}
       <button id="bPol" data-act="policy">Policies</button>
       <button id="bRel" data-act="faith">Faith</button>
       <button data-act="diplo">Diplomacy</button>
+      <button id="bNuke" data-act="nukes" hidden>Nukes</button>
       <button data-act="view">View</button>
       <button data-act="menu">Menu</button>
     </nav>
@@ -195,6 +215,7 @@ button.big small{display:block;font:500 12.5px var(--body);opacity:.8}
     <div id="toasts"></div>
     <div id="tip" hidden></div>
     <div id="view" hidden></div>
+    <div id="modebar" hidden></div>
     <aside id="city" hidden></aside>
     <div id="dock">
       <div id="left"><div id="info" hidden></div><div id="unit" hidden></div></div>
@@ -211,56 +232,61 @@ button.big small{display:block;font:500 12.5px var(--body);opacity:.8}
 <script>
 'use strict';
 /* ================= DATA ================= */
-const SQ=Math.sqrt(3),S0=36,MAXT=300;
-const TERR={ocean:{n:'Ocean',f:1,p:0,g:0,col:'#2f7fc9',water:1},coast:{n:'Coast',f:1,p:0,g:1,col:'#55b9ea',water:1},
- grass:{n:'Grassland',f:2,p:0,g:0,col:'#7ed05a'},plains:{n:'Plains',f:1,p:1,g:0,col:'#d8cd62'},desert:{n:'Desert',f:0,p:0,g:0,col:'#f6df8f'},
- tundra:{n:'Tundra',f:1,p:0,g:0,col:'#b9cdb8'},snow:{n:'Snow',f:0,p:0,g:0,col:'#f6fbff'},mountain:{n:'Mountain',f:0,p:0,g:0,col:'#c9bfb2',block:1}};
+const SQ=Math.sqrt(3),S0=36,MAXT=400;
+const TERR={ocean:{n:'Ocean',f:1,p:0,g:0,col:'#7fb4e2',water:1},coast:{n:'Coast',f:1,p:0,g:1,col:'#a8d6f0',water:1},
+ grass:{n:'Grassland',f:2,p:0,g:0,col:'#b9e0a0'},plains:{n:'Plains',f:1,p:1,g:0,col:'#e8e2ab'},desert:{n:'Desert',f:0,p:0,g:0,col:'#f5e9c3'},
+ tundra:{n:'Tundra',f:1,p:0,g:0,col:'#d6dfd3'},snow:{n:'Snow',f:0,p:0,g:0,col:'#fafcfd'},mountain:{n:'Mountain',f:0,p:0,g:0,col:'#ddd6cd',block:1}};
 const RES={wheat:{n:'Wheat',f:1,imp:'farm',col:'#f0d257'},cattle:{n:'Cattle',f:1,imp:'pasture',col:'#d9b48c'},fish:{n:'Fish',f:2,col:'#a9def2'},
  stone:{n:'Stone',p:1,imp:'quarry',col:'#d2d2d2'},horses:{n:'Horses',p:1,imp:'pasture',col:'#7a4d23',dk:1,strat:1},iron:{n:'Iron',p:1,imp:'mine',col:'#525b68',dk:1,strat:1},
  gems:{n:'Gems',g:3,imp:'mine',col:'#ee8fdd',lux:1},wine:{n:'Wine',g:2,imp:'plantation',col:'#93305f',dk:1,lux:1},spices:{n:'Spices',g:2,imp:'plantation',col:'#ee9450',lux:1},
  silk:{n:'Silk',g:2,imp:'plantation',col:'#f4ecd2',lux:1},silver:{n:'Silver',g:2,imp:'mine',col:'#b9c6d6',lux:1}};
 const IMP={farm:{n:'Farm',f:1},mine:{n:'Mine',p:1,tech:'mining'},lumber:{n:'Lumber mill',p:1,tech:'construction'},pasture:{n:'Pasture',f:1,p:1,tech:'husbandry'},
- quarry:{n:'Quarry',p:1,tech:'masonry'},plantation:{n:'Plantation',g:2,tech:'pottery'}};
-const ERAS=['Ancient','Classical','Medieval','Renaissance','Industrial','Modern'];
+ quarry:{n:'Quarry',p:1,tech:'masonry'},plantation:{n:'Plantation',g:2,tech:'calendar'}};
+const ERAS=['Ancient','Classical','Medieval','Renaissance','Industrial','Modern','Atomic'];
 const T=(n,cost,era,...pre)=>({n,cost,era,pre});
-const TECH={agriculture:T('Agriculture',0,0),pottery:T('Pottery',30,0,'agriculture'),husbandry:T('Animal Husbandry',30,0,'agriculture'),archery:T('Archery',30,0,'agriculture'),
- mining:T('Mining',30,0,'agriculture'),seafaring:T('Seafaring',45,0,'pottery'),writing:T('Writing',45,0,'pottery'),riding:T('Horse Riding',50,0,'husbandry'),
- masonry:T('Masonry',45,0,'mining'),bronze:T('Bronze Working',50,0,'mining'),
- mathematics:T('Mathematics',90,1,'writing','masonry'),philosophy:T('Philosophy',90,1,'writing'),currency:T('Currency',90,1,'bronze','writing'),iron:T('Iron Working',100,1,'bronze'),
- construction:T('Construction',100,1,'masonry'),engineering:T('Engineering',130,1,'mathematics','construction'),casting:T('Metal Casting',130,1,'iron'),
- feudalism:T('Feudalism',200,2,'philosophy','currency'),chivalry:T('Chivalry',240,2,'feudalism','riding'),machinery:T('Machinery',240,2,'engineering','casting'),
- education:T('Education',240,2,'philosophy','mathematics'),navigation:T('Navigation',220,2,'seafaring','mathematics'),banking:T('Banking',280,2,'currency','education'),
- gunpowder:T('Gunpowder',400,3,'machinery'),printing:T('Printing Press',400,3,'education','machinery'),astronomy:T('Astronomy',420,3,'education','navigation'),metallurgy:T('Metallurgy',480,3,'gunpowder'),
- theory:T('Scientific Theory',700,4,'astronomy','printing'),milsci:T('Military Science',700,4,'metallurgy','chivalry'),rifling:T('Rifling',750,4,'metallurgy'),
- industrialization:T('Industrialization',850,4,'banking','theory'),biology:T('Biology',850,4,'theory'),
- electricity:T('Electricity',1200,5,'industrialization'),ballistics:T('Ballistics',1200,5,'rifling','milsci'),parts:T('Replaceable Parts',1300,5,'rifling','industrialization'),
- combustion:T('Combustion',1500,5,'parts','electricity'),computers:T('Computers',1600,5,'electricity','biology'),rocketry:T('Rocketry',1900,5,'combustion','computers')};
-const TNOTE={bronze:'Workers can clear forest',seafaring:'Land units can embark onto coast',navigation:'Ships and embarked units cross ocean',biology:'Farms +1 food',industrialization:'Mines and lumber mills +1 production',rocketry:'Starship stages'};
+const TECH={agriculture:T('Agriculture',0,0),pottery:T('Pottery',30,0,'agriculture'),husbandry:T('Animal Husbandry',30,0,'agriculture'),archery:T('Archery',30,0,'agriculture'),mining:T('Mining',30,0,'agriculture'),
+ wheel:T('The Wheel',40,0,'husbandry'),calendar:T('Calendar',40,0,'pottery'),seafaring:T('Seafaring',45,0,'pottery'),writing:T('Writing',50,0,'pottery'),riding:T('Horse Riding',50,0,'husbandry'),masonry:T('Masonry',45,0,'mining'),bronze:T('Bronze Working',50,0,'mining'),
+ mathematics:T('Mathematics',100,1,'writing','masonry'),philosophy:T('Philosophy',100,1,'writing','calendar'),drama:T('Drama',100,1,'writing'),currency:T('Currency',110,1,'bronze','writing'),iron:T('Iron Working',110,1,'bronze'),optics:T('Optics',100,1,'seafaring'),
+ construction:T('Construction',120,1,'masonry','wheel'),engineering:T('Engineering',140,1,'mathematics','construction'),casting:T('Metal Casting',140,1,'iron'),
+ feudalism:T('Feudalism',230,2,'philosophy','currency'),guilds:T('Guilds',240,2,'currency','drama'),steel:T('Steel',260,2,'casting'),physics:T('Physics',260,2,'engineering'),chivalry:T('Chivalry',270,2,'feudalism','riding'),
+ machinery:T('Machinery',280,2,'physics','steel'),education:T('Education',280,2,'philosophy','mathematics'),navigation:T('Navigation',260,2,'optics','mathematics'),banking:T('Banking',300,2,'guilds','education'),
+ gunpowder:T('Gunpowder',440,3,'machinery'),printing:T('Printing Press',440,3,'education','machinery'),astronomy:T('Astronomy',450,3,'education','navigation'),economics:T('Economics',470,3,'banking'),chemistry:T('Chemistry',480,3,'gunpowder'),metallurgy:T('Metallurgy',520,3,'gunpowder'),
+ theory:T('Scientific Theory',780,4,'astronomy','printing'),milsci:T('Military Science',780,4,'metallurgy','chivalry'),rifling:T('Rifling',820,4,'metallurgy','chemistry'),steam:T('Steam Power',840,4,'theory','economics'),
+ industrialization:T('Industrialization',900,4,'steam'),biology:T('Biology',900,4,'theory'),railroad:T('Railroad',950,4,'industrialization'),dynamite:T('Dynamite',950,4,'rifling','milsci'),
+ electricity:T('Electricity',1300,5,'industrialization'),ballistics:T('Ballistics',1300,5,'dynamite'),parts:T('Replaceable Parts',1350,5,'rifling','railroad'),radio:T('Radio',1450,5,'electricity'),
+ automatic:T('Automatic Weapons',1500,5,'parts','ballistics'),combustion:T('Combustion',1550,5,'parts','electricity'),flight:T('Flight',1650,5,'combustion'),
+ electronics:T('Electronics',2000,6,'radio'),fission:T('Nuclear Fission',2200,6,'electricity','ballistics','flight'),computers:T('Computers',2200,6,'electronics','biology'),rocketry:T('Rocketry',2300,6,'flight','automatic'),
+ submarines:T('Nuclear Propulsion',2400,6,'fission','combustion'),spaceflight:T('Spaceflight',2700,6,'rocketry','computers')};
+const TNOTE={wheel:'Workers can build roads',railroad:'Units move even faster along your roads',spaceflight:'Starship stages',fission:'Atomic Program, then nuclear warheads',bronze:'Workers can clear forest',seafaring:'Land units can embark onto coast',navigation:'Ships and embarked units cross ocean',biology:'Farms +1 food',industrialization:'Mines and lumber mills +1 production',rocketry:'Workers can build missile silos',flight:'Cities can base bomber wings'};
 const U=(n,cls,cost,str,mv,tech,x={})=>({n,cls,cost,str,mv,tech,rs:0,rng:0,...x});
-const UNITS={settler:U('Settler','settler',65,0,2),worker:U('Worker','worker',40,0,2),caravan:U('Caravan','caravan',60,0,2,'husbandry'),missionary:U('Missionary','missionary',70,0,3,null,{needRel:1}),
+const UNITS={settler:U('Settler','settler',65,0,2),worker:U('Worker','worker',40,0,2),caravan:U('Caravan','caravan',60,0,2,'wheel'),medic:U('Medic','medic',90,0,2,'education'),missionary:U('Missionary','missionary',70,0,3,null,{needRel:1}),
  scout:U('Scout','scout',20,4,3),
  warrior:U('Warrior','melee',30,8,2,null,{up:'spearman'}),archer:U('Archer','ranged',40,5,2,'archery',{rs:7,rng:2,up:'crossbow'}),
  ballista:U('Ballista','siege',60,5,2,'bronze',{rs:8,rng:2,up:'catapult'}),
- spearman:U('Spearman','melee',50,11,2,'bronze',{up:'pikeman'}),horseman:U('Horseman','mounted',70,12,4,'riding',{res:'horses',up:'knight'}),
- swordsman:U('Swordsman','melee',75,15,2,'iron',{res:'iron',up:'musketeer'}),catapult:U('Catapult','siege',80,6,2,'mathematics',{rs:10,rng:2,up:'cannon'}),
- pikeman:U('Pikeman','melee',90,17,2,'feudalism',{up:'musketeer'}),crossbow:U('Crossbowman','ranged',110,13,2,'machinery',{rs:18,rng:2,up:'rifleman'}),
- knight:U('Knight','mounted',120,22,4,'chivalry',{res:'horses',up:'cavalry'}),musketeer:U('Musketeer','gun',150,28,2,'gunpowder',{up:'rifleman'}),
- cannon:U('Cannon','siege',180,14,2,'metallurgy',{rs:26,rng:2,up:'artillery'}),cavalry:U('Cavalry','mounted',220,36,4,'milsci',{res:'horses',up:'tank'}),
+ spearman:U('Spearman','melee',50,11,2,'bronze',{up:'pikeman',vs:{mounted:1.5}}),horseman:U('Horseman','mounted',70,12,4,'riding',{res:'horses',up:'knight',vs:{ranged:1.25,siege:1.25}}),
+ swordsman:U('Swordsman','melee',75,15,2,'iron',{res:'iron',up:'longsword'}),longsword:U('Longswordsman','melee',95,21,2,'steel',{res:'iron',up:'musketeer'}),catapult:U('Catapult','siege',80,6,2,'mathematics',{rs:10,rng:2,up:'trebuchet'}),trebuchet:U('Trebuchet','siege',120,8,2,'physics',{rs:15,rng:2,up:'cannon'}),
+ pikeman:U('Pikeman','melee',90,17,2,'feudalism',{up:'musketeer',vs:{mounted:1.5}}),crossbow:U('Crossbowman','ranged',110,13,2,'machinery',{rs:18,rng:2,up:'rifleman'}),
+ knight:U('Knight','mounted',120,22,4,'chivalry',{res:'horses',up:'cavalry',vs:{ranged:1.25,siege:1.25}}),grenadier:U('Grenadier','gun',170,26,2,'chemistry',{wallB:2.5,cityB:1.4,up:'infantry'}),musketeer:U('Musketeer','gun',150,28,2,'gunpowder',{up:'rifleman'}),
+ cannon:U('Cannon','siege',180,14,2,'metallurgy',{rs:26,rng:2,up:'artillery'}),cavalry:U('Cavalry','mounted',220,36,4,'milsci',{res:'horses',up:'tank',vs:{ranged:1.25,siege:1.25}}),
  rifleman:U('Rifleman','gun',220,38,2,'rifling',{up:'infantry'}),artillery:U('Artillery','siege',300,20,2,'ballistics',{rs:40,rng:3}),
- infantry:U('Infantry','gun',320,55,2,'parts'),tank:U('Tank','armor',380,70,5,'combustion'),
+ infantry:U('Infantry','gun',320,55,2,'parts'),machinegun:U('Machine Gunner','gun',300,40,2,'automatic',{defB:1.6}),antitank:U('Anti-Tank Gun','at',280,30,2,'combustion',{rs:42,rng:2,vs:{armor:2}}),tank:U('Tank','armor',380,70,5,'combustion'),
  galley:U('Galley','ship',50,9,4,'seafaring',{naval:1,coastOnly:1,up:'caravel'}),caravel:U('Caravel','ship',110,20,5,'navigation',{naval:1,up:'ironclad'}),
- frigate:U('Frigate','shipr',170,22,5,'astronomy',{naval:1,rs:28,rng:2,up:'battleship'}),ironclad:U('Ironclad','ship',260,45,5,'industrialization',{naval:1}),
+ frigate:U('Frigate','shipr',170,22,5,'astronomy',{naval:1,rs:28,rng:2,up:'battleship'}),ironclad:U('Ironclad','ship',260,45,5,'steam',{naval:1,up:'destroyer'}),destroyer:U('Destroyer','ship',340,58,7,'combustion',{naval:1,vs:{sub:1.6}}),
+ submarine:U('Submarine','sub',300,45,5,'combustion',{naval:1,vs:{ship:1.5,shipr:1.5},up:'nucsub'}),nucsub:U('Nuclear Submarine','sub',450,55,6,'submarines',{naval:1,vs:{ship:1.5,shipr:1.5},nuke:8}),
  battleship:U('Battleship','shipr',380,55,5,'combustion',{naval:1,rs:60,rng:3})};
 const B=(n,cost,tech,x)=>({n,cost,tech,...x});
-const BLD={monument:B('Monument',40,null,{c:2}),shrine:B('Shrine',40,'pottery',{fa:2}),granary:B('Granary',60,'pottery',{f:2}),barracks:B('Barracks',70,'bronze',{xp:15}),library:B('Library',75,'writing',{sciPop:1}),
+const BLD={monument:B('Monument',40,null,{c:2}),shrine:B('Shrine',40,'pottery',{fa:2}),granary:B('Granary',60,'pottery',{f:2}),lighthouse:B('Lighthouse',90,'optics',{f:1,g:1,coastal:1}),odeon:B('Odeon',90,'drama',{c:2,hap:1}),guildhall:B('Guildhall',130,'guilds',{g:3,p:1}),armory:B('Armory',140,'steel',{xp:10,def:3}),
+ customs:B('Customs House',220,'economics',{g:3,pg:.15}),station:B('Rail Station',320,'railroad',{pp:.15,g:2}),broadcast:B('Broadcast Tower',360,'radio',{c:5,hap:2}),shelter:B('Fallout Shelter',300,'fission',{shelter:1}),barracks:B('Barracks',70,'bronze',{xp:15}),library:B('Library',75,'writing',{sciPop:1}),
  walls:B('Walls',70,'masonry',{def:5,hp:50}),arena:B('Arena',100,'construction',{hap:3}),market:B('Market',100,'currency',{g:2,pg:.25}),workshop:B('Workshop',100,'casting',{p:2,pp:.1}),
  aqueduct:B('Aqueduct',100,'engineering',{keep:.4}),temple:B('Temple',90,'philosophy',{fa:2,c:1,hap:1}),harbor:B('Harbor',120,'seafaring',{water:1,coastal:1}),
  university:B('University',160,'education',{ps:.33}),castle:B('Castle',150,'chivalry',{def:7,hp:50}),bank:B('Bank',200,'banking',{g:2,pg:.25}),
  theatre:B('Theatre',200,'printing',{c:4,hap:2}),observatory:B('Observatory',220,'astronomy',{s:4}),factory:B('Factory',300,'industrialization',{p:4,pp:.25}),
  school:B('Public School',300,'theory',{s:3,sciPop:1}),hospital:B('Hospital',300,'biology',{f:5}),powerplant:B('Power Plant',380,'electricity',{pp:.25}),lab:B('Research Lab',450,'computers',{ps:.5})};
-const WON={stones:B('Standing Stones',140,'pottery',{fa:4,c:1}),pyramids:B('Pyramids',160,'masonry',{pp:.2,c:1}),greatlibrary:B('Great Library',180,'writing',{s:3,freeTech:1}),colossus:B('Colossus',170,'bronze',{g:5}),
+const WON={stones:B('Standing Stones',140,'calendar',{fa:4,c:1}),pyramids:B('Pyramids',160,'masonry',{pp:.2,c:1}),greatlibrary:B('Great Library',180,'writing',{s:3,freeTech:1}),colossus:B('Colossus',170,'bronze',{g:5}),
  gardens:B('Hanging Gardens',200,'mathematics',{f:6,hap:1}),oracle:B('Oracle',190,'philosophy',{c:6}),greatwall:B('Great Wall',220,'construction',{wall:1}),
  cathedral:B('Grand Cathedral',380,'education',{c:8,g:3,fa:3,hap:2}),academy:B('Royal Academy',520,'astronomy',{ps:.25,s:5}),exposition:B('World Exposition',900,'industrialization',{pp:.25,pg:.25,hap:3})};
+const PROJ={ship:{n:'Starship stage',cost:600},atom:{n:'Atomic Program',cost:800,d:'Unlocks nuclear warheads for your nation. The whole world will know'},nuke:{n:'Nuclear warhead',cost:350,d:'Adds one warhead to your stockpile. It needs a silo, a bomber wing or a nuclear submarine to deliver it'},
+ bomber:{n:'Bomber wing',cost:300,d:'Based in this city. Flies one air strike a turn within 6 tiles, or delivers a warhead within 9'}};
 const POL={agrarian:{n:'Agrarianism',d:'+10% food in every city'},guilds:{n:'Guilds',d:'+10% production in every city'},mercantile:{n:'Mercantilism',d:'+15% gold in every city'},
  scholarship:{n:'Scholarship',d:'+10% science in every city'},heritage:{n:'Heritage',d:'+2 culture in every city'},discipline:{n:'Discipline',d:'+10% combat strength'},
  expansion:{n:'Expansionism',d:'Settlers cost 30% less'},army:{n:'Standing Army',d:'Unit upkeep halved'}};
@@ -309,7 +335,7 @@ function armySize(u){if(!isMil(u)||embarked(u))return 1;if(armyC.v!==formVer)arm
  for(const a of comp)m.set(a.id,comp.length);return comp.length}
 const inArmy=u=>armySize(u)>=4;
 function flank(a,ti){let n=0;for(const j of nbrI(ti)){const o=uAt.get(j);if(o&&o!==a&&o.own===a.own&&isMil(o)&&!embarked(o))n++}return Math.min(3,n)*.1}
-function endForm(pid){for(const u of unitsOf(pid)){u.sup=0;u.rout=0;u.wasArmy=inArmy(u)?1:0}}
+function endForm(pid){for(const u of unitsOf(pid)){u.sup=0;u.rout=0;if(G.tiles[idx(u.c,u.r)].fall){u.hp-=15;if(u.hp<=0){if(pid===0)note('Your '+UNITS[u.type].n+' died of radiation.','bad',idx(u.c,u.r));kill(u);continue}}}for(const u of unitsOf(pid))u.wasArmy=inArmy(u)?1:0}
 function checkRout(pid){const pl=G.players[pid];if(pl.barb)return;for(const u of unitsOf(pid)){if(!u.wasArmy||u.dead)continue;if(G.units.some(o=>o!==u&&o.own===pid&&isMil(o)&&dist(o.c,o.r,u.c,u.r)<=2))continue;
   u.wasArmy=0;u.rout=1;u.fort=false;u.drill=false;u.goto=null;if(pid===0)note('Your '+UNITS[u.type].n+' lost its formation and is falling back.','bad',idx(u.c,u.r));fx(idx(u.c,u.r),'routed','#fff');
   let home=null,hd=99;for(const c of citiesOf(pid)){const d=dist(u.c,u.r,c.c,c.r);if(d<hd){hd=d;home=c}}if(home&&hd>0){u.mv=mvOf(u);goToward(u,idx(home.c,home.r));u.mv=0}}}
@@ -324,7 +350,7 @@ function takePromo(u,k){if(k==='heal')u.hp=Math.min(100,u.hp+50);else{u.pr=u.pr|
 function autoPromo(u){while(pendingPromo(u)>0){const o=promoOpts(u);takePromo(u,u.hp<50||!o.length?'heal':pick(o))}}
 const rngOf=u=>UNITS[u.type].rng+((u.pr&&u.pr.range)||0),mvOf=u=>UNITS[u.type].mv+((u.pr&&u.pr.mobility)||0)+(UNITS[u.type].cls==='mounted'&&trait(G.players[u.own],'steppe')?1:0);
 const promoList=u=>Object.keys(u.pr||{}).map(k=>PROMO[k].n+(u.pr[k]>1?' II':'')).join(', ');
-const yearOf=t=>{const y=-4000+(t-1)*20;return y<0?-y+' BC':(y||1)+' AD'};
+const yearOf=t=>{const y=-4000+(t-1)*15;return y<0?-y+' BC':(y||1)+' AD'};
 function rebuild(){formVer++;uAt=new Map();cAt=new Map();CM=new Map();connC={};for(const u of G.units)mapOf(u).set(idx(u.c,u.r),u);for(const c of G.cities)CM.set(c.id,c);vis=new Uint8Array(G.W*G.H);updateVis()}
 function note(msg,cls='',loc){if(!G||G.autoplay)return;G.log.push('Turn '+G.turn+': '+msg);if(G.log.length>40)G.log.shift();
  const d=document.createElement('div');d.className='toast '+cls;d.textContent=msg;if(loc!=null){d.dataset.loc=loc;d.classList.add('go')}const box=$('#toasts');box.appendChild(d);while(box.children.length>5)box.firstChild.remove();setTimeout(()=>d.remove(),6000)}
@@ -344,10 +370,11 @@ function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1
 function mkNoise(rnd){const p=new Float32Array(4096);for(let i=0;i<4096;i++)p[i]=rnd();const g=(x,y)=>p[(x&63)<<6|(y&63)];
  const n=(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),fx=x-xi,fy=y-yi,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy),a=g(xi,yi),b=g(xi+1,yi),c=g(xi,yi+1),d=g(xi+1,yi+1);return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy};
  return(x,y)=>(n(x,y)+.5*n(x*2+17,y*2+9)+.25*n(x*4+5,y*4+31))/1.75}
-function genMap(W,H,seed){const rnd=mulberry(seed),ne=mkNoise(rnd),nm=mkNoise(rnd),nh=mkNoise(rnd),N=W*H,E=new Float32Array(N),Hh=new Float32Array(N);
- for(let r=0;r<H;r++)for(let c=0;c<W;c++){const i=r*W+c,ed=Math.max(Math.abs(2*c/(W-1)-1),Math.abs(2*r/(H-1)-1));E[i]=ne(c/7,r/7)-.9*Math.pow(ed,3);Hh[i]=nh(c/3.5,r/3.5)}
+function genMap(W,H,seed,type){const rnd=mulberry(seed),ne=mkNoise(rnd),nm=mkNoise(rnd),nh=mkNoise(rnd),N=W*H,E=new Float32Array(N),Hh=new Float32Array(N);
+ for(let r=0;r<H;r++)for(let c=0;c<W;c++){const i=r*W+c,ax=2*c/(W-1)-1,ay=2*r/(H-1)-1,ed=Math.max(Math.abs(ax),Math.abs(ay)),rad=Math.hypot(ax,ay)/1.2;
+  E[i]=type==='pangaea'?ne(c/6,r/6)*.5+(1-rad)*.8-.9*Math.pow(ed,4):type==='islands'?ne(c/4.2,r/4.2)-.9*Math.pow(ed,3):type==='inland'?ne(c/6,r/6)*.55+(1-Math.abs(rad-.6)*2.4)*.6-.9*Math.pow(ed,5):ne(c/7,r/7)-.9*Math.pow(ed,3);Hh[i]=nh(c/3.5,r/3.5)}
  const pct=(arr,q)=>{const s=Array.from(arr).sort((a,b)=>a-b);return s[Math.floor(q*(s.length-1))]};
- const sea=pct(E,.56),tiles=[];
+ const sea=pct(E,type==='islands'?.68:type==='pangaea'?.52:type==='inland'?.5:.56),tiles=[];
  const landH=[];for(let i=0;i<N;i++)if(E[i]>sea)landH.push(Hh[i]);const hHill=pct(landH,.72),hMt=pct(landH,.93);
  for(let r=0;r<H;r++)for(let c=0;c<W;c++){const i=r*W+c,t={t:'ocean',h:0,f:0,res:null,imp:null,own:0,city:0,lm:0};
   if(E[i]>sea){const temp=1-Math.abs(2*r/(H-1)-1)+(nm(c/5+40,r/5)-.5)*.25,m=nm(c/6,r/6);
@@ -356,36 +383,58 @@ function genMap(W,H,seed){const rnd=mulberry(seed),ne=mkNoise(rnd),nm=mkNoise(rn
   tiles.push(t)}
  G.W=W;G.H=H;G.tiles=tiles;
  for(let i=0;i<N;i++)if(tiles[i].t==='ocean'&&nbrI(i).some(j=>!TERR[tiles[j].t].water))tiles[i].t='coast';
- let lm=0,big=0,bigN=0;for(let i=0;i<N;i++){const t=tiles[i];if(TERR[t.t].water||TERR[t.t].block||t.lm)continue;lm++;let n=0;const st=[i];t.lm=lm;
+ let lm=0,big=0,bigN=0;const sizes=[0];for(let i=0;i<N;i++){const t=tiles[i];if(TERR[t.t].water||TERR[t.t].block||t.lm)continue;lm++;let n=0;const st=[i];t.lm=lm;
   while(st.length){const k=st.pop();n++;for(const j of nbrI(k)){const tj=tiles[j];if(!TERR[tj.t].water&&!TERR[tj.t].block&&!tj.lm){tj.lm=lm;st.push(j)}}}
-  if(n>bigN){bigN=n;big=lm}}
+  sizes[lm]=n;if(n>bigN){bigN=n;big=lm}}
  for(let i=0;i<N;i++){const t=tiles[i],flat=!t.h&&!t.f;if(t.t==='mountain')continue;
   if(t.t==='coast'){if(rnd()<.08)t.res='fish';continue}if(t.t==='ocean'||rnd()>.14)continue;const o=[];
   if(flat&&(t.t==='grass'||t.t==='plains'))o.push('wheat','horses','wine');if(flat&&t.t==='grass')o.push('cattle','cattle');
   if(t.h&&!t.f)o.push('iron','stone','gems','silver');if(t.t==='desert'||t.t==='tundra')o.push('stone','iron','silver');if(t.f)o.push('spices','gems','silk');
   if(o.length)t.res=o[Math.floor(rnd()*o.length)]}
- return big}
+ G.lmSize=sizes;return big}
 function rawSite(i){const t=G.tiles[i];if(TERR[t.t].water||TERR[t.t].block)return-1;const[c,r]=cr(i);let s=0;
  for(const j of within(c,r,2)){const y=tileYield(j);s+=y.f*1.2+y.p+y.g*.6+(G.tiles[j].res?1.5:0)}return s}
-function newGame(o){const sz=[[38,24],[48,30],[62,38]][o.size],seed=o.seed||(Math.random()*1e9)|0;
- G={v:2,seed,turn:1,players:[],cities:[],units:[],nid:1,wonders:{},log:[],over:null,diff:o.diff,rels:[],routes:[],deals:[],roadVer:0};
- const big=genMap(sz[0],sz[1],seed);
+const ERA_TURN=[1,50,100,150,205,260,310];
+function spawnNear(p,type,i){const m=UNITS[type].str?uAt:cAt,ok=j=>!m.has(j)&&!isWater(j)&&!TERR[G.tiles[j].t].block&&!G.tiles[j].city;let j=ok(i)?i:nbrI(i).find(ok);if(j==null)j=within(...cr(i),2).find(ok);if(j==null)return null;const[c,r]=cr(j);return spawn(p,type,c,r)}
+function bestLand(pl,list){return list.filter(k=>!UNITS[k].tech||pl.techs[UNITS[k].tech]).pop()}
+function newGame(o){const sz=[[38,24],[48,30],[62,38]][o.size],seed=o.seed||(Math.random()*1e9)|0,era=o.world==='modern'?5:(o.era||0);vis=null;
+ G={v:3,seed,turn:ERA_TURN[era],players:[],cities:[],units:[],nid:1,wonders:{},log:[],over:null,diff:o.diff,rels:[],routes:[],deals:[],roadVer:0,map:o.map||'continents',world:o.world||'fresh'};
+ const big=genMap(sz[0],sz[1],seed,G.map);
  const order=[o.nation,...NATIONS.map((_,i)=>i).filter(i=>i!==o.nation).sort(()=>Math.random()-.5)].slice(0,o.ai+1);
- const base=id=>({id,alive:true,gold:20,sci:0,research:null,techs:{},culture:0,policies:[],war:{},warT:{},met:{},ob:{},ship:0,cn:0,faith:0,rel:null,ga:0,gaT:0,gaN:0,aggr:1});
- order.forEach((ni,id)=>G.players.push({...base(id),name:NATIONS[ni].n,nat:ni,color:NATIONS[ni].col,techs:NATIONS[ni].t==='science'?{agriculture:1,pottery:1}:{agriculture:1},aggr:R(.5,1.5),seen:id===0?new Array(G.W*G.H).fill(0):null}));
+ const base=id=>({id,alive:true,gold:20+60*era,sci:0,research:null,techs:{},culture:0,policies:[],war:{},warT:{},met:{},ob:{},ship:0,cn:0,faith:0,rel:null,ga:0,gaT:0,gaN:0,aggr:1,nukes:0,prog:0,nuked:0});
+ order.forEach((ni,id)=>{const pl={...base(id),name:NATIONS[ni].n,nat:ni,color:NATIONS[ni].col,techs:{agriculture:1},aggr:R(.5,1.5),seen:id===0?new Array(G.W*G.H).fill(0):null};
+  if(NATIONS[ni].t==='science')pl.techs.pottery=1;if(G.map==='islands')pl.techs.pottery=pl.techs.seafaring=1;for(const k in TECH)if(TECH[k].era<era)pl.techs[k]=1;
+  if(G.world==='modern')for(const k of['electricity','ballistics','parts'])pl.techs[k]=1;G.players.push(pl)});
  G.players.push({...base(G.players.length),barb:true,name:'Raiders',color:'#2b2b2b',gold:0});
- const cand=[];for(let i=0;i<G.tiles.length;i++)if(G.tiles[i].lm===big&&!G.tiles[i].h){const s=rawSite(i);if(s>30)cand.push([i,s])}
+ const okLm=t=>t.lm===big||(G.lmSize[t.lm]||0)>=Math.max(16,G.lmSize[big]*.2);let cand=[];
+ for(const lim of[30,22,14]){cand=[];for(let i=0;i<G.tiles.length;i++){const t=G.tiles[i];if(t.lm&&okLm(t)&&!t.h){const s=rawSite(i);if(s>lim)cand.push([i,s])}}if(cand.length>=order.length*4)break}
  const starts=[pick(cand)[0]];
  while(starts.length<order.length){let b=-1,bs=-1;for(const[i,s]of cand){const d=Math.min(...starts.map(j=>distI(i,j)));const v=d*10+s*.3;if(v>bs){bs=v;b=i}}starts.push(b)}
- uAt=new Map();cAt=new Map();CM=new Map();
- starts.forEach((i,p)=>{const[c,r]=cr(i);spawn(p,'settler',c,r);spawn(p,'warrior',c,r)});
- rebuild();const s=unitsOf(0)[0];center(s.c,s.r);sel=s.id;cityOpen=null;pv=null;
- note('Your people are ready to settle. Found your capital.');}
+ uAt=new Map();cAt=new Map();CM=new Map();connC={};formVer++;
+ const LINE=['warrior','spearman','pikeman','musketeer','rifleman','infantry'],GUNS=['archer','crossbow','cannon','artillery'];
+ if(G.world==='modern')prebuild(starts,LINE,GUNS);
+ else starts.forEach((i,p)=>{const pl=G.players[p],[c,r]=cr(i);spawn(p,'settler',c,r);for(let k=0;k<(era>=2?1:0)+(era>=4?1:0);k++)spawnNear(p,'settler',i);for(let k=0;k<(era>=1?1:0)+(era>=3?1:0);k++)spawnNear(p,'worker',i);
+  for(let k=0;k<1+Math.ceil(era/2);k++)spawnNear(p,bestLand(pl,LINE),i);if(era>=2)spawnNear(p,bestLand(pl,GUNS),i)});
+ rebuild();const s=capOf(0)||unitsOf(0)[0];center(s.c,s.r);sel=capOf(0)?null:unitsOf(0)[0].id;cityOpen=null;pv=null;
+ note(G.world==='modern'?'The modern age. Your nation is built; the world is armed and watching.':era?'The '+ERAS[era]+' age begins. Found your cities.':'Your people are ready to settle. Found your capital.');}
+function prebuild(starts,LINE,GUNS){const was=G.autoplay;G.autoplay=true;const ps=G.players.filter(p=>!p.barb);
+ starts.forEach((i,p)=>{const[c,r]=cr(i);foundCity(spawn(p,'settler',c,r))});
+ for(let k=0;k<5;k++)for(const pl of ps){const cs=citiesOf(pl.id),from=pick(cs),site=findSite(pl,from.c,from.r,9);if(site>=0){const[c,r]=cr(site);foundCity(spawn(pl.id,'settler',c,r))}}
+ for(const pl of ps){const cs=citiesOf(pl.id),cap=cs[0];pl.gold=400;
+  for(const c of cs){c.pop=c===cap?12:5+RI(6);for(let n=0;n<c.pop+5;n++)claimTile(c);const coastal=nbrI(idx(c.c,c.r)).some(isWater);
+   for(const id in BLD){const d=BLD[id];if((d.tech&&!pl.techs[d.tech])||c.b.includes(id)||(d.coastal&&!coastal))continue;if(d.cost<=200||c===cap||Math.random()<.4)c.b.push(id)}
+   for(const i of c.tiles){const t=G.tiles[i],m=bestImp(t,pl);if(m)t.imp=m}c.hp=cityMaxHp(c);
+   if(c!==cap){const p=findPath({own:pl.id,type:'worker',c:cap.c,r:cap.r},idx(c.c,c.r),true);if(p)for(const i of p)if(!G.tiles[i].city)G.tiles[i].road=1}
+   const ci=idx(c.c,c.r);spawnNear(pl.id,bestLand(pl,LINE),ci);spawnNear(pl.id,Math.random()<.5?bestLand(pl,GUNS):bestLand(pl,LINE),ci);
+   if(coastal&&Math.random()<.5){const w=nbrI(ci).find(j=>isWater(j)&&!uAt.has(j));if(w!=null){const[x,y]=cr(w);spawn(pl.id,'ironclad',x,y)}}}
+  spawnNear(pl.id,'worker',idx(cap.c,cap.r));const c2=cs[1]||cap;spawnNear(pl.id,'worker',idx(c2.c,c2.r));for(const o of ps)if(o!==pl)pl.met[o.id]=1}
+ G.roadVer++;G.autoplay=was}
 
 /* ================= ECONOMY ================= */
 function tileYield(i,pl){const t=G.tiles[i],Tt=TERR[t.t];let f=Tt.f,p=Tt.p,g=Tt.g;if(t.h){f=0;p=2}if(t.f){f=1;p=t.h?2:1}
  if(t.res){const r=RES[t.res];f+=r.f||0;p+=r.p||0;g+=r.g||0}
  if(t.imp){const m=IMP[t.imp];f+=m.f||0;p+=m.p||0;g+=m.g||0;if(pl){if(t.imp==='farm'&&pl.techs.biology)f++;if((t.imp==='mine'||t.imp==='lumber')&&pl.techs.industrialization)p++}}
+ if(t.fall){f=0;p=Math.floor(p/2);g=0}
  if(pl){if(t.imp==='mine'&&trait(pl,'forge'))p++;if(t.f&&trait(pl,'forest'))f++}
  return{f,p,g}}
 const capOf=p=>G.cities.find(c=>c.own===p);
@@ -429,36 +478,38 @@ const availTechs=pl=>Object.keys(TECH).filter(t=>!pl.techs[t]&&TECH[t].pre.every
 const availPol=pl=>Object.keys(POL).filter(p=>!pl.policies.includes(p));
 const easeCost=c=>c<=100?c:Math.round((100+(c-100)*.75)/5)*5;
 function itemCost(pl,b){if(b.k==='u'){let c=easeCost(UNITS[b.id].cost);if(b.id==='settler'&&pl.policies.includes('expansion'))c=Math.round(c*.7);return c}
- return b.k==='b'?easeCost(BLD[b.id].cost):b.k==='w'?Math.round(WON[b.id].cost*.75/5)*5:b.k==='x'?b.cost:600}
-const itemName=b=>b.k==='u'?UNITS[b.id].n:b.k==='b'?BLD[b.id].n:b.k==='w'?WON[b.id].n:b.k==='x'?'Wall upgrade':'Starship stage';
+ return b.k==='b'?easeCost(BLD[b.id].cost):b.k==='w'?Math.round(WON[b.id].cost*.75/5)*5:b.k==='x'?b.cost:PROJ[b.id].cost}
+const itemName=b=>b.k==='u'?UNITS[b.id].n:b.k==='b'?BLD[b.id].n:b.k==='w'?WON[b.id].n:b.k==='x'?'Wall upgrade':PROJ[b.id].n;
 function unitAvail(pl,id,res){const d=UNITS[id];return(!d.tech||pl.techs[d.tech])&&(!d.res||res[d.res])}
 function buildOptions(c){const pl=G.players[c.own],res=playerRes(pl.id),o=[],coastal=nbrI(idx(c.c,c.r)).some(isWater);
  for(const id in UNITS){const d=UNITS[id];if(!unitAvail(pl,id,res))continue;if(d.up&&unitAvail(pl,d.up,res))continue;if(id==='warrior'&&pl.techs.gunpowder)continue;if(id==='galley'&&pl.techs.navigation)continue;
   if(id==='settler'&&(c.pop<2||happiness(pl)<=-10))continue;if(d.naval&&!coastal)continue;if(d.needRel&&(pl.rel==null||c.rel!==pl.rel))continue;o.push({k:'u',id})}
  for(const id in BLD){const d=BLD[id];if(d.tech&&!pl.techs[d.tech]||c.b.includes(id)||d.coastal&&!coastal)continue;o.push({k:'b',id})}
  for(const id in WON){if(!pl.techs[WON[id].tech]||G.wonders[id])continue;o.push({k:'w',id})}
- if(pl.techs.rocketry&&pl.ship<3)o.push({k:'p',id:'ship'});const wn=wallJob(c);if(wn)o.push({k:'x',id:'walls',cost:Math.max(30,wn*15)});return o}
+ if(pl.techs.spaceflight&&pl.ship<3)o.push({k:'p',id:'ship'});if(pl.techs.fission&&!pl.prog&&!G.cities.some(z=>z.own===pl.id&&z!==c&&z.build&&z.build.id==='atom'))o.push({k:'p',id:'atom'});if(pl.prog)o.push({k:'p',id:'nuke'});if(pl.techs.flight)o.push({k:'p',id:'bomber'});const wn=wallJob(c);if(wn)o.push({k:'x',id:'walls',cost:Math.max(30,wn*15)});return o}
 function bDesc(d){const o=[];for(const[k,n]of[['f','food'],['p','production'],['g','gold'],['s','science'],['c','culture'],['fa','faith'],['hap','happiness']])if(d[k])o.push('+'+d[k]+' '+n);
  for(const[k,n]of[['pp','production'],['pg','gold'],['ps','science']])if(d[k])o.push('+'+Math.round(d[k]*100)+'% '+n);
  if(d.sciPop)o.push('+1 science per 2 citizens');if(d.def)o.push('+'+d.def+' city defense');if(d.xp)o.push('New units start with '+d.xp+' XP');
- if(d.keep)o.push('Keeps 40% food after growth');if(d.water)o.push('+1 food on water tiles, links city to a capital with a harbor');if(d.freeTech)o.push('One free technology');if(d.wall)o.push('+6 defense in all your cities');return o.join(', ')}
-function uDesc(d){return d.str?((d.naval?'Ship. ':'')+'Strength '+d.str+(d.rs?', ranged '+d.rs+' at range '+d.rng:'')+', moves '+d.mv+(d.res?', needs '+RES[d.res].n:'')+(d.coastOnly?', coast only':'')):
- d.cls==='settler'?'Founds a city. Costs 1 citizen':d.cls==='caravan'?'Opens a trade route with another city':d.cls==='missionary'?'Spreads your religion to a city':'Improves tiles and builds roads'}
+ if(d.keep)o.push('Keeps 40% food after growth');if(d.water)o.push('+1 food on water tiles, links city to a capital with a harbor');if(d.freeTech)o.push('One free technology');if(d.wall)o.push('+6 defense in all your cities');if(d.shelter)o.push('Halves what a nuclear strike does to this city');return o.join(', ')}
+function uDesc(d){return d.str?((d.naval?'Ship. ':'')+'Strength '+d.str+(d.rs?', ranged '+d.rs+' at range '+d.rng:'')+', moves '+d.mv+(d.res?', needs '+RES[d.res].n:'')+(d.coastOnly?', coast only':'')+(d.vs?'. Strong against '+Object.keys(d.vs).map(k=>({mounted:'mounted troops',ranged:'archers',siege:'siege engines',armor:'tanks',sub:'submarines',ship:'warships',shipr:'gunships'}[k]||k)).join(' and '):'')+(d.defB?'. Much stronger when defending':'')+(d.wallB?'. Tears down walls and storms cities':'')+(d.nuke?'. Can launch nuclear missiles':'')):
+ d.cls==='settler'?'Founds a city. Costs 1 citizen':d.cls==='caravan'?'Opens a trade route with another city':d.cls==='missionary'?'Spreads your religion to a city':d.cls==='medic'?'Heals your units on its tile and next to it by 10 HP a turn':'Improves tiles and builds roads'}
 function spawn(p,type,c,r){const u={id:G.nid++,own:p,type,c,r,hp:100,mv:UNITS[type].mv,xp:0};G.units.push(u);mapOf(u).set(idx(c,r),u);formVer++;return u}
-function kill(u){if(u.dead)return;u.dead=true;formVer++;if(vis&&vis[idx(u.c,u.r)]&&!G.autoplay){const tk=aNow(),n0=performance.now();fxs.push({poof:1,i:idx(u.c,u.r),t:tk});if(aClock&&tk>n0)fxs.push({ghost:{...u,dead:false},i:idx(u.c,u.r),t:n0,life:tk-n0});if(UNITS[u.type].str)sfx('die',tk)}G.units.splice(G.units.indexOf(u),1);const i=idx(u.c,u.r),m=mapOf(u);if(m.get(i)===u)m.delete(i);if(sel===u.id){sel=null;pv=null}dirty=true}
+function kill(u){if(u.dead)return;u.dead=true;formVer++;if(vis&&vis[idx(u.c,u.r)]&&!G.autoplay&&!quiet){const tk=aNow(),n0=performance.now();fxs.push({poof:1,i:idx(u.c,u.r),t:tk});if(aClock&&tk>n0)fxs.push({ghost:{...u,dead:false},i:idx(u.c,u.r),t:n0,life:tk-n0});if(UNITS[u.type].str)sfx('die',tk)}G.units.splice(G.units.indexOf(u),1);const i=idx(u.c,u.r),m=mapOf(u);if(m.get(i)===u)m.delete(i);if(sel===u.id){sel=null;pv=null}dirty=true}
 function freeSpot(c,type){const d=UNITS[type],i=idx(c.c,c.r);if(d.naval)return nbrI(i).find(j=>isWater(j)&&!uAt.has(j)&&!cAt.has(j));
  if(!(d.str?uAt:cAt).has(i))return i;return nbrI(i).find(j=>!uAt.has(j)&&!cAt.has(j)&&!isWater(j)&&!TERR[G.tiles[j].t].block&&!G.tiles[j].city)}
 function learn(pl,t){pl.techs[t]=1;if(pl.id===0)note('Discovered '+TECH[t].n+'.','good')}
 function complete(c){const pl=G.players[c.own],b=c.build,cost=itemCost(pl,b);
- if(b.k==='u'){const s=freeSpot(c,b.id);if(s==null)return false;const[x,y]=cr(s),u=spawn(c.own,b.id,x,y);if(c.b.includes('barracks')&&UNITS[b.id].str)u.xp=15;if(b.id==='settler')c.pop--;if(b.id==='caravan')u.home=c.id;u.mv=0}
+ if(b.k==='u'){const s=freeSpot(c,b.id);if(s==null)return false;const[x,y]=cr(s),u=spawn(c.own,b.id,x,y);if(UNITS[b.id].str)u.xp=c.b.reduce((n,k)=>n+((BLD[k]||{}).xp||0),0);if(b.id==='settler')c.pop--;if(b.id==='caravan')u.home=c.id;u.mv=0}
  else if(b.k==='b'){c.b.push(b.id);G.roadVer++}
  else if(b.k==='w'){if(G.wonders[b.id]){c.build=null;return false}c.b.push(b.id);G.wonders[b.id]=c.id;
   if(WON[b.id].freeTech){const a=availTechs(pl).sort((x,y)=>TECH[x].cost-TECH[y].cost)[0];if(a)learn(pl,a)}
   note(pl.name+' completed the '+WON[b.id].n+' in '+c.name+'.',c.own===0?'good':'');
   for(const o of G.cities)if(o!==c&&o.build&&o.build.k==='w'&&o.build.id===b.id)o.build=null}
  else if(b.k==='x'){const era=eraOf(pl);for(const net of wallNets(c.own))if(net.big===c)for(const i of net.tiles){const w=G.tiles[i].wall;if(w.lvl<era){w.lvl=era;w.hp=wallMax(era)}}dirty=true}
+ else if(b.id==='atom'){pl.prog=1;G.nukeAge=1;note(pl.name+' has completed an Atomic Program. The nuclear age has begun.',c.own===0?'good':'bad',idx(c.c,c.r))}
+ else if(b.id==='nuke')pl.nukes++;else if(b.id==='bomber')c.air=(c.air||0)+1;
  else{pl.ship++;note(pl.name+' finished starship stage '+pl.ship+' of 3.',c.own===0?'good':'bad');if(pl.ship>=3)win(pl,'science')}
- c.prod-=cost;if(c.own===0)note(c.name+' completed '+itemName(b)+'.','',idx(c.c,c.r));c.build=null;if(b.k==='p'&&pl.ship<3)c.build=b;return true}
+ c.prod-=cost;if(c.own===0)note(c.name+' completed '+itemName(b)+'.','',idx(c.c,c.r));c.build=null;if(b.id==='ship'&&pl.ship<3)c.build=b;return true}
 function claimTile(c){let best=-1,bs=-1e9;for(const i of within(c.c,c.r,3)){const t=G.tiles[i];if(t.own||!nbrI(i).some(j=>G.tiles[j].own===c.id))continue;
   const y=tileYield(i),s=y.f+y.p+y.g+(t.res?3:0)-distI(i,idx(c.c,c.r))*1.5-(t.t==='mountain'?3:0);if(s>bs){bs=s;best=i}}
  if(best<0)return false;G.tiles[best].own=c.id;c.tiles.push(best);return true}
@@ -466,7 +517,7 @@ function foundCity(u){const pl=G.players[u.own],i=idx(u.c,u.r),nat=NATIONS[pl.na
  const c={id:G.nid++,own:u.own,orig:u.own,name:(pl.cn>=nat.cities.length?'New ':'')+nm,c:u.c,r:u.r,pop:1,food:0,prod:0,build:null,b:[],hp:200,cul:0,tiles:[],focus:'bal',cap:pl.cn===0,rel:null,rp:{}};
  pl.cn++;kill(u);G.cities.push(c);if(trait(pl,'steppe'))c.b.push('monument');CM.set(c.id,c);const t=G.tiles[i];t.city=c.id;t.imp=null;t.f=0;if(t.own&&t.own!==c.id){const o=CM.get(t.own);o.tiles.splice(o.tiles.indexOf(i),1)}t.own=c.id;c.tiles.push(i);
  for(const j of nbrI(i))if(!G.tiles[j].own){G.tiles[j].own=c.id;c.tiles.push(j)}
- if(u.own===0){sfx('done');note('Founded '+c.name+'.','good',i);updateVis();openCity(c.id)}miniDirty=true;return c}
+ if(u.own===0&&!G.autoplay){sfx('done');note('Founded '+c.name+'.','good',i);updateVis();openCity(c.id)}miniDirty=true;return c}
 function canFound(u){const i=idx(u.c,u.r),t=G.tiles[i];if(isWater(i)||TERR[t.t].block)return false;if(t.own&&CM.get(t.own).own!==u.own)return false;return!G.cities.some(c=>dist(c.c,c.r,u.c,u.r)<3)}
 function endEconomy(pl){if(pl.barb)return;const inc=income(pl),hap=inc.hap,mul=pl.id===0?1:[.85,1,1.25][G.diff];
  if(pl.gaT>0)pl.gaT--;else if(hap>0){pl.ga+=hap;if(pl.ga>=150+130*pl.gaN){pl.ga=0;pl.gaN++;pl.gaT=8;if(pl.id===0)note('A golden age begins: +20% production and gold for 8 turns.','good')}}
@@ -477,13 +528,14 @@ function endEconomy(pl){if(pl.barb)return;const inc=income(pl),hap=inc.hap,mul=p
   c.hp=Math.min(cityMaxHp(c),c.hp+15);for(const i of c.tiles){const w=G.tiles[i].wall;if(w&&w.hp<wallMax(w.lvl)){w.hp=Math.min(wallMax(w.lvl),w.hp+6);dirty=true}}
   let tg=null,td=9;for(const i of within(c.c,c.r,2)){const e=uAt.get(i);if(e&&atWar(e.own,pl.id)){const d=distI(i,idx(c.c,c.r));if(d<td||(d===td&&e.hp<tg.hp)){td=d;tg=e}}}
   if(tg){const d=dmg(cityStr(c)*.8,uStr(tg,'def',false,true));const ti=idx(tg.c,tg.r);if(vis&&vis[ti]){fxs.push({proj:'rock',from:idx(c.c,c.r),i:ti,t:aNow()});tg._h=aNow()}tg.hp-=d;fx(ti,-d);if(tg.hp<=0){if(tg.own===0)note('Your '+UNITS[tg.type].n+' was destroyed by '+c.name+'.','bad',ti);kill(tg);checkRout(tg.own)}else if(isMil(tg)&&!inArmy(tg))tg.sup=1}}
+ for(const m of unitsOf(pl.id))if(m.type==='medic')for(const i of within(m.c,m.r,1)){const w=uAt.get(i);if(w&&w.own===pl.id&&w.hp<100)w.hp=Math.min(100,w.hp+10)}
  pl.gold+=inc.g;let sci=inc.s;if(pl.gold<0){pl.gold=0;sci=Math.floor(sci/2);const us=unitsOf(pl.id);if(us.length>2&&Math.random()<.3){const v=us[us.length-1];if(pl.id===0)note('Unpaid, your '+UNITS[v.type].n+' deserted.','bad');kill(v)}}
  pl.culture+=inc.c;pl.sci+=sci;
  if(pl.rel==null&&!relSlots())pl.culture+=inc.fa;else pl.faith+=inc.fa;
  if(pl.rel!=null){const hc=CM.get(G.rels[pl.rel].holy);if(pl.faith>=120&&hc&&hc.own===pl.id){const s=freeSpot(hc,'missionary');if(s!=null){pl.faith-=120;const[x,y]=cr(s);spawn(pl.id,'missionary',x,y).mv=0;if(pl.id===0)note('The faithful sent a missionary from '+hc.name+'.','good')}}}
  if(pl.research&&pl.sci>=TECH[pl.research].cost){pl.sci-=TECH[pl.research].cost;learn(pl,pl.research);pl.research=null}
  for(const u of unitsOf(pl.id)){if(u.drill){if(!u.acted&&u.xp<DRILLCAP)u.xp=Math.min(DRILLCAP,u.xp+2);if(u.xp>=DRILLCAP){u.drill=false;if(pl.id===0)note('Your '+UNITS[u.type].n+' has learned all it can from drilling.')}}
-  if(u.work&&--u.work.left<=0){const t=G.tiles[idx(u.c,u.r)];if(u.work.imp==='road'){t.road=1;G.roadVer++}else if(u.work.imp==='clear'){if(t.f){t.f=0;if(t.imp==='lumber')t.imp=null;const ct=t.own&&CM.get(t.own);if(ct&&ct.own===pl.id){const n=chopYield(pl);ct.prod+=n;if(pl.id===0)note('Forest cleared: +'+n+' production in '+ct.name+'.','good')}}}else if(u.work.imp==='wall'){const l=eraOf(pl);t.wall={lvl:l,hp:wallMax(l)}}else t.imp=u.work.imp;u.work=null}
+  if(u.work&&--u.work.left<=0){const t=G.tiles[idx(u.c,u.r)];if(u.work.imp==='road'){t.road=1;G.roadVer++}else if(u.work.imp==='clear'){if(t.f){t.f=0;if(t.imp==='lumber')t.imp=null;const ct=t.own&&CM.get(t.own);if(ct&&ct.own===pl.id){const n=chopYield(pl);ct.prod+=n;if(pl.id===0)note('Forest cleared: +'+n+' production in '+ct.name+'.','good')}}}else if(u.work.imp==='silo'){t.silo=1}else if(u.work.imp==='wall'){const l=eraOf(pl);t.wall={lvl:l,hp:wallMax(l)}}else t.imp=u.work.imp;u.work=null}
   if(u.acted&&!(u.pr&&u.pr.march)&&u.hp<100&&isMil(u)&&inArmy(u))u.hp=Math.min(100,u.hp+5);
   if((!u.acted||(u.pr&&u.pr.march))&&u.hp<100){const i=idx(u.c,u.r),o=ownerOf(i);u.hp=Math.min(100,u.hp+(G.tiles[i].city&&o===pl.id?25:o===pl.id?20:10))}}}
 
@@ -498,7 +550,7 @@ function addP(c,rel,n){c.rp=c.rp||{};c.rp[rel]=Math.min(400,(c.rp[rel]||0)+n)}
 function checkConv(c){if(!c.rp)return;let best=null,bv=0;for(const k in c.rp)if(c.rp[k]>bv){bv=c.rp[k];best=+k}
  if(best==null||best===c.rel||bv<15+c.pop*3||(c.rel!=null&&bv<=(c.rp[c.rel]||0)))return;if(c.rel!=null)c.rp[c.rel]=Math.floor((c.rp[c.rel]||0)/2);c.rel=best;
  if(c.own===0||G.rels[best].owner===0)note(c.name+' now follows '+G.rels[best].name+'.',G.rels[best].owner===0?'good':'')}
-function worldStep(){for(const c of G.cities){if(c.rel==null)continue;const hol=G.rels[c.rel].holy===c.id;addP(c,c.rel,hol?6:2);for(const o of G.cities)if(o!==c&&dist(c.c,c.r,o.c,o.r)<=9)addP(o,c.rel,hol?3:1)}
+function worldStep(){for(const t of G.tiles)if(t.fall&&--t.fall<=0)delete t.fall;for(const c of G.cities){if(c.rel==null)continue;const hol=G.rels[c.rel].holy===c.id;addP(c,c.rel,hol?6:2);for(const o of G.cities)if(o!==c&&dist(c.c,c.r,o.c,o.r)<=9)addP(o,c.rel,hol?3:1)}
  for(const rt of G.routes){const a=CM.get(rt.a),b=CM.get(rt.b);if(!a||!b)continue;if(a.rel!=null)addP(b,a.rel,2);if(b.rel!=null)addP(a,b.rel,2)}
  for(const c of G.cities)checkConv(c);
  G.routes=G.routes.filter(r=>{const a=CM.get(r.a),b=CM.get(r.b),ok=a&&b&&a.own===r.own&&!atWar(r.own,b.own)&&r.until>G.turn;if(!ok&&r.own===0)note('Your trade route '+(a?a.name:'?')+' to '+(b?b.name:'?')+' has ended.');return ok});
@@ -527,7 +579,7 @@ function wallNets(p){const sn=new Set(),nets=[];for(const c of G.cities)if(c.own
 function wallJob(c){const era=eraOf(G.players[c.own]);let n=0;for(const net of wallNets(c.own))if(net.big===c)n+=net.tiles.filter(i=>G.tiles[i].wall.lvl<era).length;return n}
 function borderBlocked(u,from,to){const o=ownerOf(to);if(o<0||o===u.own)return false;const pl=G.players[u.own];if(pl.barb||pl.war[o]||pl.ob[o])return false;
  const k=UNITS[u.type].cls;if(k==='caravan'||k==='missionary')return false;return ownerOf(from)!==o}
-function stepCost(j,i){const t=G.tiles[j];if(TERR[t.t].water)return 1;const f=G.tiles[i];if((t.road||t.city)&&(f.road||f.city))return .5;return t.h||t.f?2:1}
+function stepCost(j,i){const t=G.tiles[j];if(TERR[t.t].water)return 1;const f=G.tiles[i];if((t.road||t.city)&&(f.road||f.city)){const oc=t.own&&CM.get(t.own);return oc&&G.players[oc.own].techs.railroad?.3:.5}return t.h||t.f?2:1}
 class Heap{constructor(){this.a=[]}get size(){return this.a.length}
  push(v,p){const a=this.a;a.push([p,v]);let i=a.length-1;while(i>0){const k=(i-1)>>1;if(a[k][0]<=a[i][0])break;[a[k],a[i]]=[a[i],a[k]];i=k}}
  pop(){const a=this.a,top=a[0],l=a.pop();if(a.length){a[0]=l;let i=0;for(;;){let m=i;const x=2*i+1,y=x+1;if(x<a.length&&a[x][0]<a[m][0])m=x;if(y<a.length&&a[y][0]<a[m][0])m=y;if(m===i)break;[a[m],a[i]]=[a[i],a[m]];i=m}}return top[1]}}
@@ -541,8 +593,9 @@ function findPath(u,ti,land){const si=idx(u.c,u.r);if(si===ti)return[];const[tc,
 function place(u,j){const old=idx(u.c,u.r),m=mapOf(u);{const[nc,nr]=cr(j),ddx=hx(nc,nr)-hx(u.c,u.r);if(Math.abs(ddx)>1)u.face=ddx<0?-1:1}if(vis&&(u.own===0||vis[old]||vis[j])){const now=aNow();if(!(u._t&&now-u._t<300)){u._x=hx(u.c,u.r);u._y=hy(u.r)}u._t=now;tick();if(u.own===0||aClock)sfxMove(now);
   if(isWater(old)!==isWater(j)&&!UNITS[u.type].naval)fxs.push({i:isWater(j)?j:old,ring:1,t:now})}
  if(m.get(old)===u)m.delete(old);[u.c,u.r]=cr(j);m.set(j,u);u.fort=false;u.sleep=false;u.acted=true;u.work=null;u.drill=false;formVer++;if(u.own===0)updateVis();dirty=true}
-function stepTo(u,j){const i=idx(u.c,u.r);if(u.mv<=0||blocked(u,j)||!canEnter(u,j)||borderBlocked(u,i,j)||wallBlocks(u,j))return false;const ct=cityAtI(j);if(ct&&ct.own!==u.own)return false;
- const tw=isWater(j)!==isWater(i);u.mv=tw?0:Math.max(0,u.mv-stepCost(j,i));place(u,j);return true}
+function partner(u){if(!u.esc)return null;const o=(UNITS[u.type].str?cAt:uAt).get(idx(u.c,u.r));return o&&o.id===u.esc&&o.own===u.own&&o.esc===u.id?o:null}
+function stepTo(u,j,solo){const i=idx(u.c,u.r),ok=q=>!(q.mv<=0||blocked(q,j)||!canEnter(q,j)||borderBlocked(q,i,j)||wallBlocks(q,j));if(!ok(u))return false;const ct=cityAtI(j);if(ct&&ct.own!==u.own)return false;
+ const pt=solo?null:partner(u);if(pt&&!ok(pt))return false;const tw=isWater(j)!==isWater(i),cost=stepCost(j,i);u.mv=tw?0:Math.max(0,u.mv-cost);place(u,j);if(pt){pt.mv=tw?0:Math.max(0,pt.mv-cost);pt.goto=null;place(pt,j)}return true}
 function goToward(u,ti,stop=0){if(u.mv<=0||distI(idx(u.c,u.r),ti)<=stop)return true;const p=findPath(u,ti);if(!p)return false;
  for(const j of p){if(u.mv<=0||distI(idx(u.c,u.r),ti)<=stop)break;if(!stepTo(u,j))break}return true}
 const DRILLCAP=30;
@@ -559,10 +612,10 @@ function reach(u){const m=new Map(),si=idx(u.c,u.r),h=new Heap();m.set(si,u.mv);
  m.delete(si);return m}
 
 /* ================= COMBAT ================= */
-function uStr(u,mode,vsCity,vsR){const d=UNITS[u.type],pl=G.players[u.own],t=G.tiles[idx(u.c,u.r)],P=u.pr||{};let s=mode==='rng'?d.rs:d.str;
+function uStr(u,mode,vsCity,vsR,vs){const d=UNITS[u.type],pl=G.players[u.own],t=G.tiles[idx(u.c,u.r)],P=u.pr||{};let s=mode==='rng'?d.rs:d.str;
  if(mode==='def'){if(TERR[t.t].water&&!d.naval)s=Math.min(s,5);if(t.h||t.f)s*=1.25;if(u.fort)s*=1.25;if(t.wall&&t.own&&CM.get(t.own).own===u.own)s*=1.5}
  if(vsCity&&mode==='rng'&&d.cls==='siege')s*=2;if(vsCity&&mode==='atk'&&(d.cls==='mounted'||d.cls==='armor'))s*=.75;
- if(mode==='atk')s*=1+.15*(P.shock||0);if(mode==='def'){s*=1+.15*(P.drill||0);if(vsR&&P.cover)s*=1.3}if(mode==='rng')s*=1+.15*(P.accuracy||0);if(vsCity&&P.siege&&mode!=='def')s*=1.3;if(isMil(u)){if(inArmy(u))s*=1.2;else if(u.sup)s*=.8;if(u.rout)s*=.7}if(pl.policies.includes('discipline'))s*=1.1;if(d.cls==='melee'&&trait(pl,'forge'))s*=1.1;if(t.f&&!d.naval&&trait(pl,'forest'))s*=1.2;if(!pl.barb&&happiness(pl)<=-10)s*=.8;return s*(.5+.5*u.hp/100)}
+ if(mode==='atk')s*=1+.15*(P.shock||0);if(mode==='def'){s*=1+.15*(P.drill||0);if(vsR&&P.cover)s*=1.3}if(mode==='rng')s*=1+.15*(P.accuracy||0);if(vsCity&&P.siege&&mode!=='def')s*=1.3;if(vs&&d.vs){const vm=d.vs[UNITS[vs.type].cls];if(vm)s*=vm}if(mode==='def'&&d.defB)s*=d.defB;if(vsCity&&d.cityB&&mode!=='def')s*=d.cityB;if(isMil(u)){if(inArmy(u))s*=1.2;else if(u.sup)s*=.8;if(u.rout)s*=.7}if(pl.policies.includes('discipline'))s*=1.1;if(d.cls==='melee'&&trait(pl,'forge'))s*=1.1;if(t.f&&!d.naval&&trait(pl,'forest'))s*=1.2;if(!pl.barb&&happiness(pl)<=-10)s*=.8;return s*(.5+.5*u.hp/100)}
 const dmgE=(a,d)=>30*Math.exp(.04*(a-d));
 const dmg=(a,d)=>Math.max(1,Math.min(100,Math.round(dmgE(a,d)*R(.8,1.2))));
 function canAttack(u,i){const d=UNITS[u.type],si=idx(u.c,u.r);if(u.mv<=0||!d.str||u.rout)return false;const ds=distI(si,i);
@@ -570,8 +623,8 @@ function canAttack(u,i){const d=UNITS[u.type],si=idx(u.c,u.r);if(u.mv<=0||!d.str
 function enemyAt(i,p){const c=cityAtI(i);if(c&&c.own!==p)return{city:c,own:c.own};const u=uAt.get(i)||cAt.get(i);if(u&&u.own!==p)return{unit:u,own:u.own};const o=ownerOf(i);if(G.tiles[i].wall&&o>=0&&o!==p&&atWar(p,o))return{wall:1,own:o};return null}
 function preview(u,i){const e=enemyAt(i,u.own);if(!e||!canAttack(u,i))return null;const d=UNITS[u.type],rg=d.rs>0,fl=rg?1:1+flank(u,i);let deal,take=0,nm,hp;
  if(e.city){const cs=cityStr(e.city);deal=dmgE(fl*uStr(u,rg?'rng':'atk',true),cs);if(!rg)take=dmgE(cs,uStr(u,'atk'));nm=e.city.name;hp=e.city.hp}
- else if(e.wall){const t=G.tiles[i];deal=dmgE(fl*uStr(u,rg?'rng':'atk',true),wallDef(t.wall.lvl))*(d.cls==='siege'?1.25:d.cls==='armor'?1:.5);nm='the wall';hp=t.wall.hp}
- else{const dd=UNITS[e.unit.type];nm=dd.n;hp=e.unit.hp;if(!dd.str)return{i,txt:'The '+nm+' is defenseless. Attacking captures it.'};const ds=uStr(e.unit,'def',false,rg);deal=dmgE(fl*uStr(u,rg?'rng':'atk'),ds);if(!rg)take=dmgE(ds,uStr(u,'atk'))}
+ else if(e.wall){const t=G.tiles[i];deal=dmgE(fl*uStr(u,rg?'rng':'atk',true),wallDef(t.wall.lvl))*(d.cls==='siege'?1.25:d.cls==='armor'?1:.5)*(d.wallB||1);nm='the wall';hp=t.wall.hp}
+ else{const dd=UNITS[e.unit.type];nm=dd.n;hp=e.unit.hp;if(!dd.str)return{i,txt:'The '+nm+' is defenseless. Attacking captures it.'};const ds=uStr(e.unit,'def',false,rg,u);deal=dmgE(fl*uStr(u,rg?'rng':'atk',false,false,e.unit),ds);if(!rg)take=dmgE(ds,uStr(u,'atk'))}
  deal=Math.round(Math.min(100,deal));take=Math.round(Math.min(100,take));
  const v=take>=u.hp?'You would probably die.':deal>=hp?(e.city&&rg?'Wears the city down to its last defenders.':e.city?'Should take the city.':e.wall?'Breaches the wall.':'Likely kill.'):deal>take*1.3?'Favorable.':deal<take*.75?'Risky.':'Even fight.';
  return{i,txt:`Against ${nm} (HP ${Math.round(hp)}): deal about ${deal}, take about ${take}. ${v}${fl>1?' Flanking +'+Math.round((fl-1)*100)+'%.':''}${rg&&e.unit&&isMil(e.unit)&&!inArmy(e.unit)?' Suppresses the target.':''}`}}
@@ -581,13 +634,13 @@ function attack(a,i){const ad=UNITS[a.type],city=cityAtI(i),du=uAt.get(i)||cAt.g
   const back=dmg(cs,uStr(a,'atk'));city.hp-=d;a.hp-=back;fx(i,-d);fx(ai,-back);
   if(city.hp<=0){if(a.hp<=0)a.hp=1;if(G.players[a.own].barb){city.hp=1;const o=G.players[city.own],l=Math.min(o.gold,25);o.gold-=l;if(city.own===0)note('Raiders sacked '+city.name+' and took '+Math.floor(l)+' gold.','bad',i)}else capture(city,a)}
   else if(a.hp<=0){if(a.own===0)note('Your '+an+' fell attacking '+city.name+'.','bad');kill(a)}return}
- if(!du){const t=G.tiles[i],o=ownerOf(i);if(t.wall&&o>=0&&atWar(a.own,o)){const d=Math.max(1,Math.round(dmg(uStr(a,ranged?'rng':'atk',true),wallDef(t.wall.lvl))*(ad.cls==='siege'?1.25:ad.cls==='armor'?1:.5)));t.wall.hp-=d;fx(i,-d,'#e8e8e8');
+ if(!du){const t=G.tiles[i],o=ownerOf(i);if(t.wall&&o>=0&&atWar(a.own,o)){const d=Math.max(1,Math.round(dmg(uStr(a,ranged?'rng':'atk',true),wallDef(t.wall.lvl))*(ad.cls==='siege'?1.25:ad.cls==='armor'?1:.5)*(ad.wallB||1)));t.wall.hp-=d;fx(i,-d,'#e8e8e8');
    if(t.wall.hp<=0){delete t.wall;if(vis&&vis[i]&&!G.autoplay)fxs.push({poof:1,i,t:aNow()});if(a.own===0)note('Your '+an+' breached the wall.','good');else if(o===0)note('A '+an+' breached your wall.','bad',i)}}return}
  const dd=UNITS[du.type],dn=dd.n;
  if(!dd.str){fx(i,'captured');if(du.own===0)note('Your '+dn+' was captured.','bad');kill(du);if(!ranged&&canEnter(a,i)&&!wallBlocks(a,i))place(a,i);return}
- const as=fl*uStr(a,ranged?'rng':'atk'),ds=uStr(du,'def',false,ranged),d=dmg(as,ds);du.hp-=d;du.xp+=3;fx(i,-d);if(ranged&&du.hp>0&&isMil(du)&&!inArmy(du))du.sup=1;
+ const as=fl*uStr(a,ranged?'rng':'atk',false,false,du),ds=uStr(du,'def',false,ranged,a),d=dmg(as,ds);du.hp-=d;du.xp+=3;fx(i,-d);if(ranged&&du.hp>0&&isMil(du)&&!inArmy(du))du.sup=1;
  if(!ranged){const back=dmg(ds,uStr(a,'atk'));a.hp-=back;fx(ai,-back)}
- if(du.hp<=0){if(a.hp<=0)a.hp=1;if(du.own===0)note('Your '+dn+' was killed by a '+an+'.','bad',i);if(a.own===0)note('Your '+an+' destroyed a '+dn+'.','good');kill(du);checkRout(du.own);a.xp+=5;
+ if(du.hp<=0){if(a.hp<=0)a.hp=1;if(du.own===0)note('Your '+dn+' was killed by a '+an+'.','bad',i);if(a.own===0)note('Your '+an+' destroyed a '+dn+'.','good');kill(du);checkRout(du.own);a.xp+=5;a._v=aNow()+250;
   if(!ranged&&canEnter(a,i)&&!wallBlocks(a,i)){const cv2=cAt.get(i);if(cv2&&cv2.own!==a.own)kill(cv2);place(a,i)}}
  else if(a.hp<=0){if(a.own===0)note('Your '+an+' was killed attacking a '+dn+'.','bad');kill(a)}}
 function capture(city,a){const old=city.own,ci=idx(city.c,city.r);for(const m of[uAt,cAt]){const g=m.get(ci);if(g&&g.own!==a.own)kill(g)}
@@ -609,7 +662,7 @@ function bestImp(t,pl){if(t.city||TERR[t.t].water||TERR[t.t].block)return null;c
 function canImprove(u){const i=idx(u.c,u.r),t=G.tiles[i];if(ownerOf(i)!==u.own)return null;const m=bestImp(t,G.players[u.own]);return m&&t.imp!==m?m:null}
 const wTime=u=>hasWonder(u.own,'pyramids')?3:4;
 function workerAct(u){const m=canImprove(u);if(!m||u.mv<=0)return false;u.work={imp:m,left:wTime(u)};u.mv=0;u.goto=null;return true}
-function canRoad(u){const i=idx(u.c,u.r),t=G.tiles[i],o=ownerOf(i);return!isWater(i)&&!t.road&&!t.city&&(o<0||o===u.own)}
+function canRoad(u){const i=idx(u.c,u.r),t=G.tiles[i],o=ownerOf(i);return!isWater(i)&&!t.road&&!t.city&&(o<0||o===u.own)&&!!G.players[u.own].techs.wheel}
 function canWall(u){const i=idx(u.c,u.r),t=G.tiles[i];return ownerOf(i)===u.own&&!isWater(i)&&!t.city&&!t.wall&&t.t!=='mountain'}
 function workerWall(u){if(!canWall(u)||u.mv<=0)return false;u.work={imp:'wall',left:wTime(u)+1};u.mv=0;u.goto=null;return true}
 const chopYield=pl=>20+10*eraOf(pl);
@@ -624,6 +677,7 @@ function tryRoad(u){const pl=G.players[u.own];if(canRoad(u)&&idx(u.c,u.r)===road
  if(!goToward(u,g))return false;if(idx(u.c,u.r)===g)workerRoad(u);pl._rg=null;return true}
 const wallCount=p=>G.cities.reduce((n,c)=>n+(c.own===p?c.tiles.filter(i=>G.tiles[i].wall).length:0),0);
 function autoWorker(u){if(u.work||u.mv<=0)return;const pl=G.players[u.own],si=idx(u.c,u.r);
+ if(pl.id!==0&&pl.prog&&canSilo(u)&&siloCount(pl.id)<2&&Math.random()<.25){workerSilo(u);return}
  if(pl.id!==0&&eraOf(pl)>=1&&canWall(u)&&Math.random()<.35&&nbrI(si).some(j=>{const o=ownerOf(j);return o>=0&&o!==u.own})&&wallCount(pl.id)<3*citiesOf(pl.id).length){workerWall(u);return}if(u.id%2===0&&citiesOf(u.own).length>1&&tryRoad(u))return;
  if(canImprove(u)){workerAct(u);return}let best=-1,bd=99;
  for(const c of citiesOf(u.own))for(const i of c.tiles){const t=G.tiles[i];if(cAt.has(i)||t.lm!==G.tiles[si].lm)continue;const m=bestImp(t,pl);if(!m||t.imp===m)continue;
@@ -631,13 +685,50 @@ function autoWorker(u){if(u.work||u.mv<=0)return;const pl=G.players[u.own],si=id
  if(best>=0){goToward(u,best);if(idx(u.c,u.r)===best)workerAct(u)}else tryRoad(u)}
 
 /* ================= DIPLOMACY + AI ================= */
+let quiet=false,mode=null,nukeT=new Set();
+const siloCount=p=>G.cities.reduce((n,c)=>n+(c.own===p?c.tiles.filter(i=>G.tiles[i].silo).length:0),0);
+function canSilo(u){const i=idx(u.c,u.r),t=G.tiles[i];return ownerOf(i)===u.own&&!isWater(i)&&!t.city&&!t.silo&&t.t!=='mountain'&&!!G.players[u.own].techs.rocketry}
+function workerSilo(u){if(!canSilo(u)||u.mv<=0)return false;u.work={imp:'silo',left:wTime(u)+2};u.mv=0;u.goto=null;return true}
+function airReady(c){return(c.air||0)-(c.airU&&c.airU.t===G.turn?c.airU.n:0)}
+function platforms(pid){const o=[];for(const c of G.cities)if(c.own===pid){const ci=idx(c.c,c.r),rd=airReady(c);for(let k=0;k<(c.air||0);k++)o.push({k:'air',n:'Bomber wing at '+c.name,i:ci,rng:9,ready:k<rd,c});
+  for(const i of c.tiles)if(G.tiles[i].silo)o.push({k:'silo',n:'Silo near '+c.name,i,rng:14,ready:G.tiles[i].siloT!==G.turn,t:G.tiles[i]})}
+ for(const u of G.units)if(u.own===pid&&UNITS[u.type].nuke)o.push({k:'sub',n:'Nuclear submarine',i:idx(u.c,u.r),rng:UNITS[u.type].nuke,ready:u.fired!==G.turn,u});return o}
+function usePlat(p){if(p.k==='air'){const c=p.c;if(!c.airU||c.airU.t!==G.turn)c.airU={t:G.turn,n:0};c.airU.n++}else if(p.k==='silo')p.t.siloT=G.turn;else p.u.fired=G.turn;p.ready=false}
+function inNukeRange(pid,ti){return platforms(pid).some(p=>p.ready&&distI(p.i,ti)<=p.rng)}
+function launchNukes(pid,targets){const pl=G.players[pid],ps=platforms(pid);let n=0;const t0=aNow();
+ const ord=targets.map(ti=>[ti,ps.filter(p=>p.ready&&distI(p.i,ti)<=p.rng).length]).sort((a,b)=>a[1]-b[1]);
+ for(const[ti]of ord){if(pl.nukes<=0)break;let best=null,bd=99;for(const p of ps){if(!p.ready||distI(p.i,ti)>p.rng)continue;if(p.rng<bd){bd=p.rng;best=p}}if(!best)continue;usePlat(best);pl.nukes--;n++;
+  if(!G.autoplay)fxs.push({nuke:1,from:best.i,i:ti,t:t0,life:5600});nukeImpact(ti,pid,t0+2400)}
+ if(n){pl.nuked=(pl.nuked||0)+n;sfx('shot',t0);sfx('die',t0+2400);if(aClock)aClock+=1200}return n}
+function nukeImpact(i,by,tI){const pl=G.players[by],hit=new Set(),[ic,ir]=cr(i);quiet=true;
+ const ghost=u=>{if(vis&&vis[idx(u.c,u.r)]&&!G.autoplay)fxs.push({ghost:{...u,dead:false},i:idx(u.c,u.r),t:performance.now(),life:Math.max(60,tI-performance.now())})};
+ for(const j of within(ic,ir,1)){const t=G.tiles[j],ctr=j===i,o=ownerOf(j);if(o>=0&&o!==by)hit.add(o);
+  for(const m of[uAt,cAt]){const u=m.get(j);if(!u)continue;if(u.own!==by)hit.add(u.own);const d=ctr?999:50+RI(35);if(d>=u.hp){ghost(u);if(u.own===0)note('Your '+UNITS[u.type].n+' was lost in the blast.','bad',j);kill(u)}else u.hp-=d}
+  const c=cityAtI(j);if(c){const sh=c.b.includes('shelter');if(ctr){c.pop=Math.max(1,Math.ceil(c.pop*(sh?.75:.5)));c.hp=Math.max(1,Math.round(cityMaxHp(c)*(sh?.3:.1)));c.prod=0;c.food=0;const bl=c.b.filter(b=>BLD[b]&&b!=='shelter');
+    for(let k=0;k<(sh?1:3)&&bl.length;k++){const b=bl.splice(RI(bl.length),1)[0];c.b.splice(c.b.indexOf(b),1)}if(!sh)c.air=0}else{c.pop=Math.max(1,c.pop-1);c.hp=Math.max(1,Math.round(c.hp*.5))}}
+  else{if(ctr||Math.random()<.6)t.imp=null;delete t.wall;if(ctr)delete t.silo;if(t.f&&(ctr||Math.random()<.5))t.f=0}
+  if(!TERR[t.t].water)t.fall=ctr?12:8}
+ quiet=false;for(const o of hit){const op=G.players[o];if(op.barb)continue;if(o!==by&&!op.war[by])declareWar(by,o);op.revenge=by;checkRout(o)}
+ const tn=cityAtI(i);note(pl.name+' launched a nuclear strike'+(tn?' on '+tn.name:'')+'.',by===0?'':'bad',i);G.roadVer++;dirty=miniDirty=true;if(vis)updateVis()}
+function airStrike(c,i){if(airReady(c)<=0||distI(idx(c.c,c.r),i)>6)return false;const e=enemyAt(i,c.own);if(!e||!atWar(c.own,e.own))return false;if(!c.airU||c.airU.t!==G.turn)c.airU={t:G.turn,n:0};c.airU.n++;
+ const S=60,t0=aNow();if(vis&&(vis[i]||vis[idx(c.c,c.r)])&&!G.autoplay){fxs.push({plane:1,from:idx(c.c,c.r),i,t:t0,life:1500});sfx('shot',t0+600);if(aClock)aClock+=600}
+ if(e.city){const d=dmg(S,cityStr(e.city));e.city.hp=Math.max(1,e.city.hp-d);fx(i,-d)}
+ else if(e.wall){const t=G.tiles[i],d=Math.round(dmg(S,wallDef(t.wall.lvl))*1.25);t.wall.hp-=d;fx(i,-d,'#e8e8e8');if(t.wall.hp<=0)delete t.wall}
+ else{const u=e.unit,d=UNITS[u.type].str?dmg(S,uStr(u,'def',false,true)):100;u.hp-=d;fx(i,-d);if(u.hp<=0){if(u.own===0)note('Your '+UNITS[u.type].n+' was destroyed from the air.','bad',i);kill(u);checkRout(u.own)}else if(isMil(u)&&!inArmy(u))u.sup=1}
+ dirty=true;return true}
+function techPath(t){const s=new Set(),f=k=>{if(s.has(k))return;s.add(k);TECH[k].pre.forEach(f)};f(t);return s}
+function aiNukes(pl){for(const c of citiesOf(pl.id)){let g=0;while(airReady(c)>0&&g++<3&&!(pl.nukes>0&&pl.prog)){let b=-1,bd=7;for(const i of within(c.c,c.r,6)){const e=enemyAt(i,pl.id);if(e&&atWar(pl.id,e.own)&&!e.wall){const d=distI(i,idx(c.c,c.r));if(d<bd){bd=d;b=i}}}if(b<0||!airStrike(c,b))break}}
+ if(pl.nukes<=0)return;const rev=pl.revenge!=null&&pl.war[pl.revenge]&&G.players[pl.revenge].alive;if(!Object.keys(pl.war).length){pl.revenge=null;return}if(!rev&&Math.random()>(G.players.some(o=>pl.war[o.id]&&o.nukes>0)?.06:.18))return;
+ const ps=platforms(pl.id).filter(p=>p.ready);if(!ps.length)return;const mine=citiesOf(pl.id);
+ const ts=G.cities.filter(c=>pl.war[c.own]&&!G.players[c.own].barb&&!mine.some(m=>dist(m.c,m.r,c.c,c.r)<=2)&&!(G.tiles[idx(c.c,c.r)].fall>6)&&ps.some(p=>distI(p.i,idx(c.c,c.r))<=p.rng)).sort((a,b)=>(b.own===pl.revenge)-(a.own===pl.revenge)||b.pop-a.pop).slice(0,rev?pl.nukes:1).map(c=>idx(c.c,c.r));
+ if(ts.length)launchNukes(pl.id,ts);pl.revenge=null}
 function declareWar(a,b){const A=G.players[a],Bp=G.players[b];if(A.war[b])return;A.war[b]=1;Bp.war[a]=1;A.warT[b]=Bp.warT[a]=G.turn;delete A.ob[b];delete Bp.ob[a];
  if(a===0||b===0||(human().met[a]&&human().met[b]))note(A.name+' declared war on '+Bp.name+'.',b===0?'bad':'');
  for(const u of G.units)if(u.own===a||u.own===b){u.sleep=false}}
 function makePeace(a,b){delete G.players[a].war[b];delete G.players[b].war[a];G.players[a].warT[b]=G.players[b].warT[a]=G.turn;
  if(a===0||b===0||(human().met[a]&&human().met[b]))note(G.players[a].name+' and '+G.players[b].name+' made peace.','good')}
 function attitude(ai,o){let s=(1-ai.aggr)*2;if(ai.ob[o.id])s+=2;s+=G.deals.filter(d=>(d.from===ai.id&&d.to===o.id)||(d.from===o.id&&d.to===ai.id)).length;
- s+=G.routes.filter(r=>r.own===o.id&&CM.get(r.b)&&CM.get(r.b).own===ai.id).length;if(ai.warT[o.id]&&G.turn-ai.warT[o.id]<30)s-=3;
+ s+=G.routes.filter(r=>r.own===o.id&&CM.get(r.b)&&CM.get(r.b).own===ai.id).length;if(ai.warT[o.id]&&G.turn-ai.warT[o.id]<30)s-=3;s-=Math.min(6,(o.nuked||0)*1.5);
  const ca=capOf(ai.id),co=capOf(o.id);if(ca&&co&&ca.rel!=null&&ca.rel===co.rel)s+=1;if(power(o)<power(ai)*.6)s-=1;return s}
 const attName=s=>s>=2?'Friendly':s>=0?'Neutral':s>=-2?'Wary':'Hostile';
 function openBorders(a,b){G.players[a].ob[b]=G.players[b].ob[a]=G.turn+30}
@@ -650,7 +741,7 @@ function aiDiplomacy(pl){for(const o of G.players){if(o===pl||o.barb||!o.alive)c
    if(o.id!==0&&!pl.ob[o.id]&&att>=0&&Math.random()<.04)openBorders(pl.id,o.id);
    if(G.turn<35||anyWar||since<15||(o.id===0&&!o.met[pl.id]))continue;
    const mc=citiesOf(pl.id),oc=citiesOf(o.id);if(!mc.length||!oc.length)continue;let near=99;for(const a of mc)for(const b of oc)near=Math.min(near,dist(a.c,a.r,b.c,b.r));
-   if(near<=14&&power(pl)>power(o)*1.2&&Math.random()<.025*pl.aggr*(G.diff+1)*(att>=2?.2:att<-2?1.6:1))declareWar(pl.id,o.id)}}}
+   if(near<=14&&power(pl)>power(o)*1.2&&Math.random()<.025*pl.aggr*(G.diff+1)*(att>=2?.2:att<-2?1.6:1)*(o.nukes>0&&!pl.nukes?.25:1))declareWar(pl.id,o.id)}}}
 function offers(o){const h=human(),r=[],att=attitude(o,h);if(h.war[o.id])return r;
  if(!h.ob[o.id]&&att>=-1)r.push(['ob',o.id,'Agree to open borders for 30 turns',0]);
  const mine=luxOf(0),theirs=luxOf(o.id);
@@ -661,13 +752,14 @@ function offers(o){const h=human(),r=[],att=attitude(o,h);if(h.war[o.id])return 
   const st=Object.keys(h.techs).filter(t=>!o.techs[t]&&TECH[t].pre.every(p=>o.techs[p])).sort((a,b)=>TECH[b].cost-TECH[a].cost)[0];
   if(st){const pr=Math.min(Math.floor(o.gold),Math.round(TECH[st].cost*.8));if(pr>0&&pr>=TECH[st].cost*.4)r.push(['sellTech',o.id+':'+st,'Sell '+TECH[st].n+' for '+pr+' gold',0])}}
  return r}
-function findSite(pl,c,r,rad){let best=-1,bs=30;const lm=G.tiles[idx(c,r)].lm;for(const i of within(c,r,rad)){const t=G.tiles[i];if(t.lm!==lm||t.own||cAt.has(i)&&cAt.get(i).own!==pl.id)continue;const[a,b]=cr(i);
+function findSite(pl,c,r,rad){let best=-1,bs=30;const lm=G.tiles[idx(c,r)].lm;for(const i of within(c,r,rad)){const t=G.tiles[i];if((t.lm!==lm&&!(G.map==='islands'&&pl.techs.seafaring&&t.lm))||t.own||cAt.has(i)&&cAt.get(i).own!==pl.id)continue;const[a,b]=cr(i);
   if(G.cities.some(ct=>dist(ct.c,ct.r,a,b)<4))continue;const s=rawSite(i)-dist(c,r,a,b)*.7;if(s>bs){bs=s;best=i}}return best}
 function bestMil(pl,c,opts,siege){let l=opts.filter(o=>o.k==='u'&&UNITS[o.id].str&&!UNITS[o.id].naval&&o.id!=='scout'&&(siege||UNITS[o.id].cls!=='siege'));if(!l.length)return null;
  l.sort((a,b)=>Math.max(UNITS[b.id].str,UNITS[b.id].rs*1.1)-Math.max(UNITS[a.id].str,UNITS[a.id].rs*1.1));return l[Math.random()<.7?0:Math.min(1,l.length-1)]}
 function aiPickBuild(pl,c){const opts=buildOptions(c),us=unitsOf(pl.id),cs=citiesOf(pl.id),mil=us.filter(u=>isMil(u)&&!UNITS[u.type].naval).length,war=Object.keys(pl.war).length>0;
  const has=id=>opts.find(o=>o.id===id),g=uAt.get(idx(c.c,c.r)),y=cityYields(c),hap=happiness(pl),making=id=>cs.some(o=>o.build&&o.build.id===id);
- if(has('ship'))return has('ship');
+ if(has('atom')&&(c===cs[0]||Math.random()<.3))return has('atom');if(has('ship')&&!(G.nukeAge&&pl.prog&&pl.nukes<1&&Math.random()<.5))return has('ship');
+ if(has('nuke')&&pl.nukes<3+G.diff&&!making('nuke')&&Math.random()<.6)return has('nuke');if(has('bomber')&&(c.air||0)<1&&cs.reduce((n,z)=>n+(z.air||0),0)<2&&Math.random()<(pl.prog?.5:.08))return has('bomber');
  if(!(g&&g.own===pl.id&&isMil(g))&&mil<cs.length)return bestMil(pl,c,opts)||opts[0];
  if(hap<1){const hb=opts.filter(o=>o.k==='b'&&BLD[o.id].hap).sort((a,b)=>BLD[a.id].cost-BLD[b.id].cost)[0];if(hb)return hb}
  if(has('settler')&&hap>=3&&cs.length<7&&!us.some(u=>u.type==='settler')&&!making('settler')&&mil>=cs.length&&findSite(pl,c.c,c.r,9)>=0)return has('settler');
@@ -718,10 +810,10 @@ function aiUnit(pl,u){if(u.dead)return;autoPromo(u);if(u.mv<=0)return;const d=UN
  aiMilitary(pl,u)}
 function upgradeCost(u){const d=UNITS[u.type],pl=G.players[u.own];if(!d.up||!unitAvail(pl,d.up,playerRes(pl.id)))return null;return Math.round((UNITS[d.up].cost-d.cost)*2+10)}
 function doUpgrade(u){const c=upgradeCost(u),pl=G.players[u.own];if(c==null||pl.gold<c)return;pl.gold-=c;u.type=UNITS[u.type].up;u.mv=0;dirty=true}
-function aiTurn(pl){if(!pl.research){const a=availTechs(pl);if(a.length)pl.research=a.sort((x,y)=>TECH[x].cost*R(.8,1.25)-TECH[y].cost*R(.8,1.25))[0]}
+function aiTurn(pl){if(!pl.research){let a=availTechs(pl);if(G.nukeAge&&!pl.techs.fission){const need=techPath('fission'),b=a.filter(t=>need.has(t));if(b.length)a=b}else if(G.nukeAge&&pl.prog&&!pl.techs.rocketry){const need=techPath('rocketry'),b=a.filter(t=>need.has(t));if(b.length)a=b}if(a.length)pl.research=a.sort((x,y)=>TECH[x].cost*R(.8,1.25)-TECH[y].cost*R(.8,1.25))[0]}
  while(pl.culture>=policyCost(pl)&&availPol(pl).length){pl.culture-=policyCost(pl);pl.policies.push(pick(availPol(pl)))}
  if(canFoundRel(pl))foundReligion(pl,pick(freeBeliefs()));
- aiDiplomacy(pl);const cs=citiesOf(pl.id);
+ aiDiplomacy(pl);aiNukes(pl);const cs=citiesOf(pl.id);
  for(const c of cs){if(!c.build)c.build=aiPickBuild(pl,c)||null;
   if(c.build&&c.build.k!=='w'&&c.build.k!=='p'){const bc=buyCost(c);if(pl.gold>bc+(Object.keys(pl.war).length?40:180)){pl.gold-=bc;c.prod=itemCost(pl,c.build);complete(c);if(!c.build)c.build=aiPickBuild(pl,c)||null}}
   if(!unitsOf(pl.id).some(u=>u.gar===c.id)){let b=null,bd=99;for(const u of unitsOf(pl.id))if(isMil(u)&&!u.gar&&UNITS[u.type].cls!=='mounted'&&!UNITS[u.type].naval){const dd=dist(u.c,u.r,c.c,c.r);if(dd<bd){bd=dd;b=u}}if(b&&bd<8)b.gar=c.id}}
@@ -729,13 +821,13 @@ function aiTurn(pl){if(!pl.research){const a=availTechs(pl);if(a.length)pl.resea
 function barbTurn(pl){const era=Math.max(...G.players.filter(p=>!p.barb&&p.alive).map(eraOf)),n=unitsOf(pl.id).length,cap=1+G.players.length;
  if(G.turn>10&&n<cap+2&&Math.random()<.45){for(let k=0;k<40;k++){const i=RI(G.tiles.length),t=G.tiles[i];if(isWater(i)||TERR[t.t].block||t.own||uAt.has(i)||cAt.has(i))continue;const[c,r]=cr(i);
    if(G.units.some(u=>dist(u.c,u.r,c,r)<4)||G.cities.some(ct=>dist(ct.c,ct.r,c,r)<5))continue;
-   spawn(pl.id,pick([['warrior'],['warrior','archer','spearman'],['swordsman','pikeman'],['musketeer','pikeman'],['rifleman'],['rifleman','infantry']][era]),c,r);break}}
+   spawn(pl.id,pick([['warrior'],['warrior','archer','spearman'],['swordsman','pikeman'],['musketeer','pikeman'],['rifleman'],['rifleman','infantry'],['infantry','machinegun']][Math.min(6,era)]),c,r);break}}
  for(const u of unitsOf(pl.id))if(!u.dead)aiMilitary(pl,u)}
 const buyCost=c=>Math.max(5,Math.ceil((itemCost(G.players[c.own],c.build)-c.prod)*2.5));
 
 /* ================= TURN FLOW ================= */
 function startTurn(pl){for(const u of unitsOf(pl.id)){u.mv=Math.max(1,mvOf(u)-(u.sup&&!inArmy(u)?1:0));u.acted=false;u.skip=false}}
-function endTurn(){if(G.over&&!G.cont){showOver();return}const h=human();pv=null;
+function endTurn(){if(G.over&&!G.cont){showOver();return}const h=human();pv=null;mode=null;nukeT.clear();
  sfx('turn');if(h.alive)endEconomy(h);endForm(0);if(!G.autoplay)aStart=aClock=performance.now()+150;
  for(const pl of G.players){if(pl.id===0||!pl.alive)continue;startTurn(pl);if(pl.barb)barbTurn(pl);else{aiTurn(pl);endEconomy(pl)}endForm(pl.id)}aClock=0;
  worldStep();G.turn++;if(G.turn>MAXT&&!G.over){const best=G.players.filter(p=>!p.barb&&p.alive).sort((a,b)=>score(b)-score(a))[0];win(best,'score')}
@@ -743,7 +835,7 @@ function endTurn(){if(G.over&&!G.cont){showOver();return}const h=human();pv=null
  startTurn(h);for(const u of unitsOf(0)){if(u.goto!=null)follow(u);if(u.auto)autoWorker(u);if(u.explore)autoExplore(u)}
  updateVis();for(const u of unitsOf(0))if(u.sleep&&G.units.some(e=>atWar(e.own,0)&&dist(e.c,e.r,u.c,u.r)<=2&&vis[idx(e.c,e.r)])){u.sleep=false;note('Enemies are close to your sleeping '+UNITS[u.type].n+'.','bad',idx(u.c,u.r))}
  save();miniDirty=true;if(!G.autoplay){if(G.over&&!G.cont)showOver();else{nextAsk();const u=selUnit();if(!u||!needsOrders(u))selectNext(true)}ui()}}
-const needsOrders=u=>u.own===0&&!u.skip&&((u.mv>0&&!u.fort&&!u.sleep&&u.goto==null&&!u.auto&&!u.work&&!u.explore&&!u.drill)||pendingPromo(u)>0);
+const needsOrders=u=>u.own===0&&!u.skip&&((u.mv>0&&!u.fort&&!u.sleep&&u.goto==null&&!u.auto&&!u.work&&!u.explore&&!u.drill&&!(u.esc&&UNITS[u.type].str&&partner(u)))||pendingPromo(u)>0);
 function selectNext(pan){const l=unitsOf(0).filter(needsOrders);pv=null;if(!l.length)return false;const cur=l.findIndex(u=>u.id===sel),u=l[(cur+1)%l.length];sel=u.id;reachC=null;if(pan)center(u.c,u.r);dirty=true;return true}
 function pending(){const h=human();if(G.over&&!G.cont)return{l:'Results',f:showOver};
  if(!h.research&&availTechs(h).length&&citiesOf(0).length)return{l:'Choose research',f:()=>ACT.tech()};
@@ -751,14 +843,14 @@ function pending(){const h=human();if(G.over&&!G.cont)return{l:'Results',f:showO
  if(canFoundRel(h))return{l:'Found religion',f:()=>ACT.faith()};
  const c=citiesOf(0).find(c=>!c.build);if(c)return{l:'Choose production',f:()=>{center(c.c,c.r);openCity(c.id)}};
  if(unitsOf(0).some(needsOrders))return{l:'Next unit',f:()=>{selectNext(true);ui()},soft:1};return{l:'End turn',f:endTurn}}
-function updateVis(){if(!G||!vis)return;vis.fill(0);const h=human();const mark=i=>{vis[i]=1;h.seen[i]=1};
+function updateVis(){if(!G||!vis)return;vis.fill(0);const h=human();const mark=i=>{vis[i]=1;h.seen[i]=1};if(G.devSee){vis.fill(1);for(let i=0;i<h.seen.length;i++)h.seen[i]=1}
  for(const u of G.units)if(u.own===0)for(const i of within(u.c,u.r,(u.type==='scout'||G.tiles[idx(u.c,u.r)].h?3:2)+((u.pr&&u.pr.sentry)||0)))mark(i);
  for(const c of G.cities)if(c.own===0)for(const i of c.tiles){mark(i);for(const j of nbrI(i))mark(j)}
  for(const u of G.units)if(u.own!==0&&vis[idx(u.c,u.r)])meet(u.own);for(const c of G.cities)if(c.own!==0&&c.tiles.some(i=>vis[i]))meet(c.own);dirty=true;miniDirty=true}
 function meet(p){const h=human(),o=G.players[p];if(o.barb||h.met[p])return;h.met[p]=1;o.met[0]=1;note('You have met the '+o.name+'.')}
 const ser=()=>JSON.stringify(G,(k,v)=>k[0]==='_'?undefined:v);
 function save(){try{localStorage.setItem('meridian-save',ser())}catch(e){}}
-function load(data){try{const s=data||JSON.parse(localStorage.getItem('meridian-save'));if(!s||s.v!==2)return false;G=s;rebuild();const c=capOf(0)||unitsOf(0)[0];if(c)center(c.c,c.r);return true}catch(e){return false}}
+function load(data){try{const s=data||JSON.parse(localStorage.getItem('meridian-save'));if(!s||s.v!==3)return false;G=s;rebuild();const c=capOf(0)||unitsOf(0)[0];if(c)center(c.c,c.r);return true}catch(e){return false}}
 
 /* ================= RENDER ================= */
 const cv=$('#map'),ctx=cv.getContext('2d'),mini=$('#mini'),mctx=mini.getContext('2d');
@@ -786,17 +878,19 @@ function resIcon(x,k,a,b,col){x.strokeStyle=x.fillStyle=col;x.lineWidth=1.5;x.li
 /* ---- cartoon kit ---- */
 if(!CanvasRenderingContext2D.prototype.roundRect)CanvasRenderingContext2D.prototype.roundRect=function(a,b,w,h){this.rect(a,b,w,h)};
 const OUT='#2b1c10',WOOD='#9a6a38',DWOOD='#7d5028';
-const ink=x=>{x.strokeStyle=OUT;x.lineWidth=1.5;x.lineJoin='round';x.lineCap='round'};
+let softInk=false;const SOFT='#8a7566';
+const ink=x=>{x.strokeStyle=softInk?SOFT:OUT;x.lineWidth=softInk?1.3:1.5;x.lineJoin='round';x.lineCap='round'};
 function blob(x,f){x.fillStyle=f;x.fill();x.stroke()}
 function circ(x,a,b,r,f){x.beginPath();x.arc(a,b,r,0,7);blob(x,f)}
 function rr(x,a,b,w,h,r,f){x.beginPath();x.roundRect(a,b,w,h,r);blob(x,f)}
 function poly(x,p,f){x.beginPath();for(let i=0;i<p.length;i+=2)x[i?'lineTo':'moveTo'](p[i],p[i+1]);x.closePath();blob(x,f)}
-function stick(x,a,b,c,d,w,col){x.strokeStyle=OUT;x.lineWidth=w+2.2;x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.stroke();x.strokeStyle=col;x.lineWidth=w;x.stroke();x.strokeStyle=OUT;x.lineWidth=1.5}
+function stick(x,a,b,c,d,w,col){const o=softInk?SOFT:OUT;x.strokeStyle=o;x.lineWidth=w+(softInk?1.8:2.2);x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.stroke();x.strokeStyle=col;x.lineWidth=w;x.stroke();x.strokeStyle=o;x.lineWidth=softInk?1.3:1.5}
 function dome(x,cy,r,f){x.beginPath();x.arc(0,cy,r,Math.PI,0);x.closePath();blob(x,f)}
 function wheel(x,a,b,r,rot){circ(x,a,b,r,'#b98045');x.beginPath();for(let k=0;k<3;k++){const an=rot+k*Math.PI/3;x.moveTo(a+Math.cos(an)*r,b+Math.sin(an)*r);x.lineTo(a-Math.cos(an)*r,b-Math.sin(an)*r)}x.stroke()}
 function flag(x,a,b,col,t){x.beginPath();x.moveTo(a,b);x.lineTo(a,b-11);x.stroke();const w=Math.sin(t/200)*1.5;x.beginPath();x.moveTo(a,b-11);x.quadraticCurveTo(a+4,b-12+w,a+8,b-9.5);x.quadraticCurveTo(a+4,b-7-w,a,b-6);x.closePath();blob(x,col)}
 const SPR={settler:{hat:'straw',w:'bindle'},worker:{hat:'cap',w:'hammer'},missionary:{hat:'none',w:'sun',robe:1},scout:{hat:'hood',w:'staff'},
- warrior:{hat:'fur',w:'club',sh:1},archer:{hat:'hood',w:'bow'},spearman:{hat:'crest',w:'spear',sh:1},swordsman:{hat:'helm',w:'sword',sh:1},pikeman:{hat:'kettle',w:'pike'},crossbow:{hat:'kettle',w:'xbow'},
+ warrior:{hat:'fur',w:'club',sh:1},longsword:{hat:'helm',w:'sword',sh:1,armor:1},grenadier:{hat:'kepi',w:'bomb'},machinegun:{hat:'modern',w:'mg'},medic:{hat:'none',w:'bag',robe:1,white:1},
+ trebuchet:{k:'catapult',big:1},antitank:{k:'cannon',big:1},destroyer:{k:'steam',big:1},submarine:{k:'sub'},nucsub:{k:'sub',big:1},archer:{hat:'hood',w:'bow'},spearman:{hat:'crest',w:'spear',sh:1},swordsman:{hat:'helm',w:'sword',sh:1},pikeman:{hat:'kettle',w:'pike'},crossbow:{hat:'kettle',w:'xbow'},
  musketeer:{hat:'feather',w:'gun'},rifleman:{hat:'kepi',w:'gun'},infantry:{hat:'modern',w:'gun'},
  horseman:{k:'horse',hat:'fur',w:'spear'},knight:{k:'horse',hat:'crest',w:'pike',armor:1},cavalry:{k:'horse',hat:'kepi',w:'sword'},
  ballista:{k:'ballista'},catapult:{k:'catapult'},cannon:{k:'cannon'},artillery:{k:'cannon',big:1},tank:{k:'tank'},caravan:{k:'cart'},
@@ -821,14 +915,17 @@ function weapon(x,w,col){switch(w){
  case'bow':x.strokeStyle=OUT;x.lineWidth=4;x.beginPath();x.arc(1,-4,10,-1.25,1.25);x.stroke();x.strokeStyle=WOOD;x.lineWidth=2;x.stroke();x.strokeStyle='#f3efe2';x.lineWidth=1;x.beginPath();x.moveTo(4.1,-13.5);x.lineTo(4.1,5.5);x.stroke();ink(x);break;
  case'xbow':stick(x,0,0,12,-2,2.4,WOOD);stick(x,10,-8,10,4,1.6,DWOOD);break;
  case'gun':stick(x,-3,3,11,-5,2.8,DWOOD);stick(x,11,-5,17,-8.5,1.5,'#8d949b');break;
+ case'mg':stick(x,-3,2,14,-3,3.2,'#555b62');stick(x,8,-1,5,8,1.4,'#555b62');stick(x,8,-1,12,8,1.4,'#555b62');break;
+ case'bomb':circ(x,2,-9,4.2,'#3a3a3a');stick(x,3,-13,5,-16,1.2,'#e0aa3e');break;
+ case'bag':rr(x,-2,-2,9,8,2,'#fbf7ea');x.fillStyle='#3fae5a';x.fillRect(1.6,-.2,1.8,4.6);x.fillRect(.2,1.2,4.6,1.8);break;
  case'bindle':stick(x,0,5,-7,-16,1.6,WOOD);circ(x,-8,-18,4.2,'#f3ead2');break;
  case'hammer':stick(x,0,2,0,-11,1.9,WOOD);rr(x,-4.5,-16,9,5.5,1.2,'#aab4bf');break;
  case'sun':stick(x,0,8,0,-15,1.7,WOOD);x.strokeStyle='#ffd95a';x.lineWidth=1.6;x.beginPath();for(let k=0;k<8;k++){const a=k*Math.PI/4;x.moveTo(Math.cos(a)*5.5,-20+Math.sin(a)*5.5);x.lineTo(Math.cos(a)*8,-20+Math.sin(a)*8)}x.stroke();ink(x);circ(x,0,-20,4.2,'#ffd95a');break;
  default:stick(x,0,7,0,-16,1.8,WOOD)}}
-function drawGuy(x,sp,col,st,noLegs){const t=st.t,wk=st.walk?Math.sin(t/70):0,sw=st.atk>=0?Math.sin(st.atk*Math.PI):0,flat=sp.w==='gun'||sp.w==='xbow'||sp.w==='bow';
+function drawGuy(x,sp,col,st,noLegs){const t=st.t,wk=st.walk?Math.sin(t/70):0,sw=st.atk>=0?Math.sin(st.atk*Math.PI):0,flat=sp.w==='gun'||sp.w==='xbow'||sp.w==='bow'||sp.w==='mg'||sp.w==='bag';
  if(!noLegs){stick(x,-3,-7,-3-wk*3,0,2.8,'#4a3526');stick(x,3,-7,3+wk*3,0,2.8,'#4a3526')}
  x.save();x.translate(0,Math.sin(t/380+st.ph)*.6-(st.walk?Math.abs(wk)*1.6:0));
- if(sp.robe)poly(x,[-6,-18,6,-18,8.5,-1,-8.5,-1],col);else{rr(x,-6.5,-18,13,12.5,4.5,sp.armor?'#c3ccd5':col);if(sp.armor){x.fillStyle=col;x.fillRect(-1.8,-17,3.6,10.5)}}
+ if(sp.robe){poly(x,[-6,-18,6,-18,8.5,-1,-8.5,-1],sp.white?'#fbf7ea':col);if(sp.white){x.fillStyle=col;x.fillRect(-7.5,-5,15,2.5)}}else{rr(x,-6.5,-18,13,12.5,4.5,sp.armor?'#c3ccd5':col);if(sp.armor){x.fillStyle=col;x.fillRect(-1.8,-17,3.6,10.5)}}
  circ(x,0,-24,7.5,'#f8d2a6');
  x.fillStyle=OUT;if(((t+st.ph*900)%3300)<130){x.fillRect(.4,-22.6,2.6,1.1);x.fillRect(3.8,-22.6,2.6,1.1)}else{x.beginPath();x.arc(1.6,-22.4,1.25,0,7);x.arc(5,-22.4,1.25,0,7);x.fill()}
  x.fillStyle='rgba(230,110,90,.5)';x.beginPath();x.arc(-1.2,-20,1.6,0,7);x.fill();
@@ -870,24 +967,33 @@ function drawSteam(x,sp,col,st){const t=st.t,ga=x.globalAlpha;x.save();x.rotate(
  rr(x,-4,-23,5.5,10,1.2,'#555b62');rr(x,-9,-15.5,sp.big?18:14,7.5,2,'#d0d6dc');
  if(sp.big){stick(x,12,-10.5,21,-11.5,1.8,'#555b62');rr(x,7,-12.5,6.5,4.5,2,'#98a1aa');stick(x,-13,-10.5,-21,-11.5,1.8,'#555b62');rr(x,-15,-12.5,6.5,4.5,2,'#98a1aa')}
  poly(x,[-19,-8,19,-8,15,1,-14,1],sp.big?'#98a1aa':'#7b7066');x.fillStyle=col;x.fillRect(-16.5,-6.6,33,2.6);flag(x,-9,-15.5,col,t);x.restore()}
+function drawSub(x,sp,col,st){const t=st.t;x.save();x.rotate(Math.sin(t/650+st.ph)*.02);const L=sp.big?21:17,hc=sp.big?'#4b5560':'#5f6b76';
+ x.beginPath();x.moveTo(-L,-4);x.quadraticCurveTo(-L+3,-10,-6,-10);x.lineTo(L-6,-10);x.quadraticCurveTo(L+2,-7,L,-3);x.lineTo(L-4,0);x.lineTo(-L+3,0);x.closePath();blob(x,hc);
+ rr(x,-5,-17,9,7.5,2,hc);stick(x,1,-17,1,-23,1.3,'#3a3a3a');stick(x,1,-23,4,-23,1.3,'#3a3a3a');x.fillStyle=col;x.fillRect(-L+5,-6.5,2*L-10,2.4);
+ if(sp.big){x.fillStyle=OUT;for(const a of[8,12]){x.beginPath();x.arc(a,-10,1.3,0,7);x.fill()}}x.restore()}
 function upos(u,now){const i=idx(u.c,u.r),civ=!UNITS[u.type].str,inCity=!!G.tiles[i].city,shared=civ?uAt.has(i):false;let X=hx(u.c,u.r),Y=hy(u.r)-2,rad=14;
  if(civ){if(shared||inCity){X-=16;Y+=11;rad=10}else rad=13}else if(inCity){X+=17;Y+=11;rad=10.5}
  if(u._t&&now-u._t<300){const k=Math.max(0,(now-u._t)/300),e=k*(2-k),tx=hx(u.c,u.r),ty=hy(u.r);X+=(u._x-tx)*(1-e);Y+=(u._y-ty)*(1-e)}return{X,Y,rad}}
+function drawSprite(x,type,col,st,emb){const sp=SPR[type]||{};
+ if(emb){x.save();x.translate(0,-4);x.scale(.8,.8);drawGuy(x,sp.k?{hat:'cap',w:'staff'}:sp,col,st,true);x.restore();poly(x,[-12,-6,12,-6,8.5,1,-8.5,1],WOOD);x.fillStyle=col;x.fillRect(-10,-4.8,20,2.2);return}
+ switch(sp.k){case'horse':drawHorse(x,sp,col,st);break;case'catapult':drawCatapult(x,col,st);break;case'ballista':drawBallista(x,col,st);break;case'cannon':drawCannon(x,sp,col,st);break;case'tank':drawTank(x,col,st);break;
+  case'cart':drawCart(x,col,st);break;case'ship':drawShip(x,sp,col,st);break;case'sub':drawSub(x,sp,col,st);break;case'steam':drawSteam(x,sp,col,st);break;default:drawGuy(x,sp,col,st)}}
+function portrait(cvs,u){const x=cvs.getContext('2d'),pl=G.players[u.own],sp=SPR[u.type]||{},k=sp.k?1.75:2.3;x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,96,96);x.translate(48,sp.k==='ship'||sp.k==='steam'||sp.k==='sub'?66:84);x.scale(k,k);softInk=false;ink(x);
+ drawSprite(x,u.type,pl.barb?'#555':pl.color,{t:performance.now(),ph:0,walk:false,atk:-1,work:false},false)}
 function drawUnit(x,u,now){const d=UNITS[u.type],pl=G.players[u.own],i=idx(u.c,u.r),sp=SPR[u.type]||{},col=pl.barb?'#555':pl.color;let{X,Y,rad}=upos(u,now);
  const mk=u._t?(now-u._t)/300:9,walk=mk>=0&&mk<1,ak=u._a?(now-u._a)/400:9,atk=ak>=0&&ak<1?ak:-1,water=isWater(i),emb=water&&!d.naval;
  if(walk&&!water)Y-=Math.sin(mk*Math.PI)*5;if(atk>=0){const l=Math.sin(atk*Math.PI)*10;X+=(u._ax||0)*l;Y+=(u._ay||0)*l}
- if(u._h&&now>=u._h&&now-u._h<280)X+=Math.sin(now/14)*2.4;
- const k=rad/14*(sp.k==='horse'?.84:sp.k==='ship'||sp.k==='steam'?1:sp.k?.92:.98),f=u.face<0?-1:1,st={t:now,ph:(u.id*1.7)%6.28,walk,atk,work:!!u.work||!!u.drill},by=Y+rad*.95,selq=u.id===sel;
+ const hk=u._h&&now>=u._h&&now-u._h<320?(now-u._h)/320:-1,vk=u._v&&now>=u._v&&now-u._v<520?(now-u._v)/520:-1;if(hk>=0)X+=Math.sin(now/14)*2.2;if(vk>=0)Y-=Math.abs(Math.sin(vk*Math.PI*2))*6;
+ const k=rad/14*(sp.k==='horse'?.84:sp.k==='ship'||sp.k==='steam'||sp.k==='sub'?1:sp.k?.92:.98),f=u.face<0?-1:1,st={t:now,ph:(u.id*1.7)%6.28,walk,atk,work:!!u.work||!!u.drill},by=Y+rad*.95,selq=u.id===sel;
  x.beginPath();x.ellipse(X,by,rad*(water?1.25:.98),rad*.42,0,0,7);
  if(water){x.fillStyle='rgba(255,255,255,.35)';x.fill()}else{x.fillStyle=col;x.fill()}
  x.strokeStyle=selq?'#fff36b':u.fort?'#ffd978':water?'rgba(255,255,255,.7)':'#fbf7ea';x.lineWidth=selq?3.2+Math.sin(now/200)*.8:u.fort?2.6:1.8;x.stroke();
- x.save();x.translate(X,by-1+(water?Math.sin(now/450+st.ph)*1.2:0));x.scale(f*k,k);ink(x);if(u.own===0&&u.mv<=0&&atk<0&&!walk)x.globalAlpha=.6;
- if(emb){x.save();x.translate(0,-4);x.scale(.8,.8);drawGuy(x,sp.k?{hat:'cap',w:'staff'}:sp,col,st,true);x.restore();poly(x,[-12,-6,12,-6,8.5,1,-8.5,1],WOOD);x.fillStyle=col;x.fillRect(-10,-4.8,20,2.2)}
- else switch(sp.k){case'horse':drawHorse(x,sp,col,st);break;case'catapult':drawCatapult(x,col,st);break;case'ballista':drawBallista(x,col,st);break;case'cannon':drawCannon(x,sp,col,st);break;case'tank':drawTank(x,col,st);break;
-  case'cart':drawCart(x,col,st);break;case'ship':drawShip(x,sp,col,st);break;case'steam':drawSteam(x,sp,col,st);break;default:drawGuy(x,sp,col,st)}
+ x.save();x.translate(X,by-1+(water?Math.sin(now/450+st.ph)*1.2:0));if(walk&&!water){const ga=x.globalAlpha;x.fillStyle='#fff';for(const q of[0,.45]){const dk=(mk+q)%1;x.globalAlpha=(1-dk)*.5;x.beginPath();x.arc(-f*(6+dk*9),-2-dk*4,2+dk*3,0,7);x.fill()}x.globalAlpha=ga}
+ x.scale(f*k,k);ink(x);if(u.own===0&&u.mv<=0&&atk<0&&!walk)x.globalAlpha=.6;if(hk>=0){const s=Math.sin(hk*Math.PI);x.translate(-3.5*s,0);x.rotate(-.2*s)}else if(walk&&!water)x.rotate(.07);
+ drawSprite(x,u.type,col,st,emb);
  if(atk>=0&&atk<.55&&!emb&&(sp.w==='gun'||sp.k==='cannon'||sp.k==='tank'||d.cls==='shipr')){const ga=x.globalAlpha;x.globalAlpha=ga*(1-atk/.55);x.fillStyle='#fff';x.beginPath();x.arc(20+atk*8,-17,3+atk*9,0,7);x.arc(24+atk*12,-21,2+atk*6,0,7);x.fill();x.globalAlpha=ga}
- if(pl.barb){x.fillStyle='#ff4a3a';x.beginPath();x.arc(0,-2,0,0,7);x.fill()}
  x.restore();
+ if(hk>=0&&hk<.6){const s=hk/.6,bx=X+f*rad*.5,byy=Y-rad*.3;x.strokeStyle='#fff7c2';x.lineWidth=2.4*(1-s)+.6;x.beginPath();for(let q=0;q<7;q++){const a=q*.9+u.id,r1=4+s*5,r2=9+s*11;x.moveTo(bx+Math.cos(a)*r1,byy+Math.sin(a)*r1);x.lineTo(bx+Math.cos(a)*r2,byy+Math.sin(a)*r2)}x.stroke()}
  if(u.hp<100){x.fillStyle=OUT;x.fillRect(X-rad-1,by+rad*.42+2,rad*2+2,5.5);x.fillStyle=u.hp>50?'#7be06c':u.hp>25?'#ffd24a':'#ff6a55';x.fillRect(X-rad,by+rad*.42+3,rad*2*u.hp/100,3.5)}
  const np=u.pt||0;if(np){x.fillStyle='#ffd24a';x.strokeStyle=OUT;x.lineWidth=1;for(let q=0;q<np;q++){x.beginPath();x.arc(X-rad+3+q*5.5,by-rad*.42-1,2.2,0,7);x.fill();x.stroke()}}
  if(u.own===0&&pendingPromo(u)>0){const py=Y-rad*2.5+Math.sin(now/250)*2;x.strokeStyle=OUT;x.lineWidth=1.5;x.beginPath();x.arc(X,py,7,0,7);x.fillStyle='#ffd24a';x.fill();x.stroke();x.lineWidth=2.2;x.beginPath();x.moveTo(X-3.2,py+1.5);x.lineTo(X,py-2.5);x.lineTo(X+3.2,py+1.5);x.stroke()}
@@ -904,41 +1010,53 @@ function drawCity(x,ct,X,Y,now){const pc=G.players[ct.own].color,big=ct.pop>=8,m
  house(x,X-21,Y+10,12,9,pc);house(x,X+9,Y+11,12,10,pc);house(x,X-6,Y+(mid?16:8),12,mid?9:11,mid?alt:pc);
  if(ct.b.includes('walls')||ct.b.includes('castle')){rr(x,X-25,Y+13,50,6.5,1.5,'#c2bbae');x.fillStyle='#c2bbae';for(let k=-24;k<24;k+=8){x.beginPath();x.rect(X+k,Y+9.5,4.5,3.5);x.fill();x.stroke()}}
  if(ct.build&&vis[idx(ct.c,ct.r)])for(let k=0;k<2;k++){const p=(now/1300+k/2+ct.id*.37)%1;x.globalAlpha=(1-p)*.7;x.fillStyle='#fff';x.beginPath();x.arc(X+15+p*5,Y-2-p*16,2+p*4,0,7);x.fill()}x.globalAlpha=1}
-const CROPS=['#ecd067','#a6d463','#cfa468','#f2de8c'];
+const CROPS=['#f2e09a','#c6e4a0','#e0c39c','#f7ecb8'];
 function drawFarm(x,X,Y){x.save();hexPath(x,X,Y,COR);x.clip();const cw=31,ch=27,j0=Math.floor((Y-S0)/ch),j1=Math.floor((Y+S0)/ch);
  for(let j=j0;j<=j1;j++){const ox=(j&1)*cw/2,i0=Math.floor((X-S0-ox)/cw),i1=Math.floor((X+S0-ox)/cw);for(let i=i0;i<=i1;i++){const h=((i*374761393+j*668265263)>>>0)%97,px=i*cw+ox,py=j*ch;x.fillStyle=CROPS[h%4];x.fillRect(px,py,cw+.5,ch+.5);
    x.strokeStyle=h%4===2?'rgba(70,40,10,.3)':'rgba(60,70,10,.24)';x.lineWidth=1.5;x.beginPath();if(h%3){for(let k=4.5;k<ch;k+=6){x.moveTo(px+3,py+k);x.lineTo(px+cw-3,py+k)}}else for(let k=5;k<cw;k+=6){x.moveTo(px+k,py+3);x.lineTo(px+k,py+ch-3)}x.stroke();
-   x.strokeStyle='rgba(60,105,35,.7)';x.lineWidth=2.2;x.strokeRect(px,py,cw,ch)}}
+   x.strokeStyle='rgba(110,160,85,.6)';x.lineWidth=2;x.strokeRect(px,py,cw,ch)}}
  x.restore()}
+function drawRes(x,k,X,Y,hs){ink(x);const o=(hs%3-1)*2;switch(k){
+ case'wheat':for(const[a,b]of[[-9,4],[-3,-2],[4,5],[10,-3],[1,-11]]){stick(x,X+a,Y+b+7,X+a,Y+b-4,1.3,'#d9b445');x.beginPath();x.ellipse(X+a,Y+b-6,2.4,4.6,0,0,7);blob(x,'#f3d35e')}break;
+ case'cattle':for(const[a,b,s]of[[-7,-3,1],[8,5,-1]]){rr(x,X+a-7,Y+b-4,14,8.5,4,'#fff');x.fillStyle='#8a5a3a';x.beginPath();x.arc(X+a-2,Y+b-1,2.6,0,7);x.arc(X+a+3,Y+b+1.5,1.8,0,7);x.fill();circ(x,X+a+8*s,Y+b-3,3.4,'#fff');stick(x,X+a-4,Y+b+4,X+a-4,Y+b+8,1.2,'#5a3a2a');stick(x,X+a+4,Y+b+4,X+a+4,Y+b+8,1.2,'#5a3a2a')}break;
+ case'fish':for(const[a,b,s]of[[-6,-6,1],[7,4,-1],[-3,9,1]]){x.beginPath();x.ellipse(X+a,Y+b,6.5,3.3,0,0,7);blob(x,'#e9f7ff');poly(x,[X+a-6*s,Y+b,X+a-11*s,Y+b-3.5,X+a-11*s,Y+b+3.5],'#cfeaf7');x.fillStyle=SOFT;x.beginPath();x.arc(X+a+3.5*s,Y+b-.8,.9,0,7);x.fill()}break;
+ case'stone':poly(x,[X-15,Y+6,X-11,Y-6,X-2,Y-9,X+3,Y+6],'#cfd2d6');poly(x,[X+1,Y+8,X+5,Y-3,X+13,Y-4,X+16,Y+8],'#b9bdc3');poly(x,[X-6,Y+10,X-3,Y+2,X+5,Y+2,X+7,Y+10],'#e2e4e7');break;
+ case'horses':for(const[a,b,s]of[[-7,-2,1],[8,7,-1]]){for(const q of[-4,3])stick(x,X+a+q,Y+b+2,X+a+q,Y+b+8,1.4,'#7a4d23');x.beginPath();x.ellipse(X+a,Y+b,7.5,4.2,0,0,7);blob(x,'#a8713d');poly(x,[X+a+4*s,Y+b-2,X+a+8*s,Y+b-10,X+a+12*s,Y+b-8,X+a+9*s,Y+b-1],'#a8713d');stick(x,X+a-7*s,Y+b-1,X+a-10*s,Y+b+4,1.3,'#4a2f18')}break;
+ case'iron':poly(x,[X-17,Y+9,X-10,Y-7,X-1,Y-11,X+8,Y-5,X+15,Y+9],'#7d828b');x.fillStyle='#ee8a3c';for(const[a,b]of[[-9,0],[-3,-6],[3,1],[8,4],[-4,5],[1,-2],[-11,5]]){x.beginPath();x.rect(X+a,Y+b,3.4,2.6);x.fill()}x.fillStyle='#c7541f';for(const[a,b]of[[-6,2],[5,-2],[10,6]]){x.beginPath();x.rect(X+a,Y+b,2.4,2);x.fill()}break;
+ case'gems':for(const[a,b,c2,s]of[[-8,3,'#f39be0',1],[2,-5,'#8fe3f0',1.25],[10,6,'#c3a2f5',.9]]){poly(x,[X+a,Y+b-9*s,X+a+5*s,Y+b-3*s,X+a+3*s,Y+b+5*s,X+a-3*s,Y+b+5*s,X+a-5*s,Y+b-3*s],c2);x.strokeStyle='rgba(255,255,255,.8)';x.lineWidth=1;x.beginPath();x.moveTo(X+a-2*s,Y+b-3*s);x.lineTo(X+a,Y+b-7*s);x.stroke();ink(x)}break;
+ case'wine':for(const b of[-7,1,9]){stick(x,X-12,Y+b,X+10,Y+b,2.6,'#7fbf6a');x.fillStyle='#8e3f8f';for(const a of[-9,-3,3,8]){x.beginPath();x.arc(X+a+o,Y+b+2.4,2,0,7);x.fill()}}break;
+ case'spices':for(const[a,b]of[[-8,2],[3,-6],[9,6]]){circ(x,X+a,Y+b,6,'#8ccf7c');x.fillStyle='#f0703a';for(const[p,q2]of[[-2,-1],[2,1],[0,3],[1,-3]]){x.beginPath();x.arc(X+a+p,Y+b+q2,1.5,0,7);x.fill()}}break;
+ case'silk':for(const[a,b]of[[-8,1],[5,-5],[8,7]]){rr(x,X+a-1.2,Y+b+3,2.4,5,1,'#9a7b5c');circ(x,X+a,Y+b,6.2,'#9bd39a');x.fillStyle='#fff';x.strokeStyle=SOFT;x.lineWidth=.8;for(const[p,q2]of[[-2.5,-1],[2.5,0],[0,2.8]]){x.beginPath();x.ellipse(X+a+p,Y+b+q2,1.5,2.3,.5,0,7);x.fill();x.stroke()}ink(x)}break;
+ default:poly(x,[X-17,Y+9,X-9,Y-8,X,Y-11,X+9,Y-4,X+15,Y+9],'#c9d3de');x.strokeStyle='#fff';x.lineWidth=2.2;x.beginPath();x.moveTo(X-11,Y+4);x.lineTo(X-4,Y-4);x.lineTo(X+1,Y+1);x.lineTo(X+8,Y-1);x.moveTo(X-3,Y+6);x.lineTo(X+5,Y+5);x.stroke()}}
 const isFarm=t=>t.imp==='farm'&&!t.city&&V.imp&&!V.pol&&!V.rel;
-const HILLC={grass:'#69b944',plains:'#c4a94e',desert:'#e2bd70',tundra:'#9fb39d',snow:'#dfe9ee'};
+const HILLC={grass:'#a3d38a',plains:'#d9cc90',desert:'#ead8a4',tundra:'#c0ccbd',snow:'#e9f0f3'};
 const bgc=document.createElement('canvas'),bgx=bgc.getContext('2d');
 function viewport(){const dpr=Math.min(2,window.devicePixelRatio||1),w=cv.clientWidth,h=cv.clientHeight,z=cam.z;
  return{dpr,w,h,z,r0:Math.max(0,Math.floor((cam.y-h/2/z)/(1.5*S0))-1),r1:Math.min(G.H-1,Math.ceil((cam.y+h/2/z)/(1.5*S0))+1),c0:Math.max(0,Math.floor((cam.x-w/2/z)/(SQ*S0))-1),c1:Math.min(G.W-1,Math.ceil((cam.x+w/2/z)/(SQ*S0))+1)}}
 const setT=(x,v)=>x.setTransform(v.dpr*v.z,0,0,v.dpr*v.z,v.dpr*(v.w/2-cam.x*v.z),v.dpr*(v.h/2-cam.y*v.z));
 function renderBG(v){const x=bgx,{r0,r1,c0,c1,z}=v;if(bgc.width!==cv.width||bgc.height!==cv.height){bgc.width=cv.width;bgc.height=cv.height}
- x.setTransform(1,0,0,1,0,0);x.fillStyle='#121a2b';x.fillRect(0,0,bgc.width,bgc.height);setT(x,v);
- const seen=human().seen,su=selUnit(),oc=cityOpen&&CM.get(cityOpen),HC=COR;x.lineJoin='round';x.lineCap='round';
+ x.setTransform(1,0,0,1,0,0);x.fillStyle='#1d2843';x.fillRect(0,0,bgc.width,bgc.height);setT(x,v);
+ const seen=human().seen,su=selUnit(),oc=cityOpen&&CM.get(cityOpen),HC=COR;x.lineJoin='round';x.lineCap='round';softInk=true;
  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r),X=hx(c,r),Y=hy(r);
-  if(!seen[i]){hexPath(x,X,Y,HC);x.fillStyle='#1a2740';x.fill();if(V.grid){x.strokeStyle='rgba(255,255,255,.05)';x.lineWidth=1.5;x.stroke()}continue}
+  if(!seen[i]){hexPath(x,X,Y,HC);x.fillStyle='#27334f';x.fill();if(V.grid){x.strokeStyle='rgba(255,255,255,.05)';x.lineWidth=1.5;x.stroke()}continue}
   const t=G.tiles[i],Tt=TERR[t.t],hs=(c*73+r*151)%7,vv=hs/7,o=ownerOf(i);hexPath(x,X,Y,HC);x.fillStyle=Tt.col;x.fill();
   x.fillStyle=vv>.5?`rgba(255,255,255,${(vv-.5)*.1})`:`rgba(0,0,0,${(.5-vv)*.07})`;x.fill();
   if(o>=0&&(V.tint||V.pol)&&!V.rel){x.globalAlpha=V.pol?.62:.1;x.fillStyle=G.players[o].color;x.fill();x.globalAlpha=1}
   if(V.rel&&t.own){const rc=CM.get(t.own).rel;if(rc!=null){x.globalAlpha=.55;x.fillStyle=G.rels[rc].col;x.fill();x.globalAlpha=1}}
   x.fillStyle='rgba(255,255,255,.13)';x.beginPath();x.ellipse(X-7,Y-14,17,7,-.45,0,7);x.fill();
-  const farm=isFarm(t);if(farm)drawFarm(x,X,Y);else if(V.grid){hexPath(x,X,Y,HC);x.strokeStyle='rgba(43,28,16,.33)';x.lineWidth=2;x.stroke()}
+  const farm=isFarm(t);if(farm)drawFarm(x,X,Y);else if(V.grid){hexPath(x,X,Y,HC);x.strokeStyle='rgba(90,70,50,.17)';x.lineWidth=1.6;x.stroke()}
   if(V.feat){const ox=(vv-.5)*12;
-   if(Tt.water){x.strokeStyle='rgba(255,255,255,.6)';x.lineWidth=2.2;x.beginPath();x.moveTo(X-13+ox,Y-6);x.quadraticCurveTo(X-8+ox,Y-11,X-3+ox,Y-6);x.quadraticCurveTo(X+2+ox,Y-1,X+7+ox,Y-6);x.moveTo(X-6-ox,Y+9);x.quadraticCurveTo(X-1-ox,Y+4,X+4-ox,Y+9);x.stroke()}
+   if(Tt.water){}
    else if(!t.h&&!t.f&&!farm&&t.t==='desert'){x.strokeStyle='rgba(150,105,40,.45)';x.lineWidth=2;x.beginPath();x.moveTo(X-15,Y+7);x.quadraticCurveTo(X-8,Y+1,X-1,Y+7);x.stroke();if(hs<3&&!t.imp){ink(x);stick(x,X+8+ox,Y+3,X+8+ox,Y-10,3.4,'#62b84e');stick(x,X+8+ox,Y-3,X+3+ox,Y-6,2.2,'#62b84e')}}
-   else if(!t.h&&!t.f&&!farm&&t.t!=='snow'&&t.t!=='mountain'){x.strokeStyle='rgba(40,80,20,.4)';x.lineWidth=1.8;x.beginPath();for(const[a,b]of[[-10+ox,-4],[7-ox,6],[2+ox,-15]]){x.moveTo(X+a-3,Y+b-4);x.lineTo(X+a,Y+b);x.lineTo(X+a+3,Y+b-4)}x.stroke()}}
+   else if(!t.h&&!t.f&&!farm&&t.t!=='snow'&&t.t!=='mountain'){x.strokeStyle='rgba(70,120,50,.32)';x.lineWidth=1.6;x.beginPath();for(const[a,b]of[[-10+ox,-4],[7-ox,6],[2+ox,-15]]){x.moveTo(X+a-3,Y+b-4);x.lineTo(X+a,Y+b);x.lineTo(X+a+3,Y+b-4)}x.stroke()}}
   ink(x);
-  if(t.t==='mountain'){poly(x,[X-26,Y+15,X-8,Y-21,X+3,Y-3,X+11,Y-12,X+27,Y+15],'#a79d92');x.fillStyle='rgba(0,0,0,.16)';tri(x,X-8,Y-21,X+3,Y-3,X-3,Y+15);tri(x,X+11,Y-12,X+27,Y+15,X+14,Y+15);
+  if(t.t==='mountain'){poly(x,[X-26,Y+15,X-8,Y-21,X+3,Y-3,X+11,Y-12,X+27,Y+15],'#c3b9ae');x.fillStyle='rgba(60,40,30,.1)';tri(x,X-8,Y-21,X+3,Y-3,X-3,Y+15);tri(x,X+11,Y-12,X+27,Y+15,X+14,Y+15);
    poly(x,[X-8,Y-21,X-13.5,Y-10,X-9.5,Y-12.5,X-6.5,Y-8.5,X-3,Y-13],'#fff');poly(x,[X+11,Y-12,X+6.5,Y-5,X+10.5,Y-7,X+15.5,Y-4.5],'#fff')}
   if(t.h&&V.feat){const hc=HILLC[t.t]||'#c9b060';x.beginPath();x.moveTo(X-24,Y+10);x.quadraticCurveTo(X-12,Y-18,X,Y+10);x.closePath();blob(x,hc);x.beginPath();x.moveTo(X-6,Y+12);x.quadraticCurveTo(X+8,Y-11,X+22,Y+12);x.closePath();blob(x,hc);
    x.strokeStyle='rgba(255,255,255,.55)';x.lineWidth=1.8;x.beginPath();x.moveTo(X-18,Y+1);x.quadraticCurveTo(X-13,Y-8,X-8,Y-3);x.moveTo(X+1,Y+4);x.quadraticCurveTo(X+7,Y-4,X+12,Y);x.stroke();ink(x)}
   if(t.f&&V.feat){const con=t.t==='tundra'||t.t==='snow';for(const[a,b]of[[-12,1],[2,-10],[12,4]]){const A=X+a,Bb=Y+b;
-    if(con){poly(x,[A,Bb-4,A+7.5,Bb+6,A-7.5,Bb+6],'#2f8a63');poly(x,[A,Bb-12,A+5.5,Bb-1,A-5.5,Bb-1],'#3aa377')}
-    else{rr(x,A-1.6,Bb+2,3.2,6.5,1,DWOOD);circ(x,A,Bb-2,7.6,'#3fa63c');x.fillStyle='#7bd163';x.beginPath();x.arc(A-2.4,Bb-4.6,3,0,7);x.fill()}}}
+    if(con){poly(x,[A,Bb-4,A+7.5,Bb+6,A-7.5,Bb+6],'#6fb39a');poly(x,[A,Bb-12,A+5.5,Bb-1,A-5.5,Bb-1],'#8cc7b0')}
+    else{rr(x,A-1.6,Bb+2,3.2,6.5,1,DWOOD);circ(x,A,Bb-2,7.6,'#7cc47f');x.fillStyle='#a9dfa6';x.beginPath();x.arc(A-2.4,Bb-4.6,3,0,7);x.fill()}}}
   if(farm){if(hs%3===0&&!t.res){ink(x);house(x,X+7,Y+17,12,9,'#d2493c')}}
   else if(t.imp&&!t.city&&V.imp){const a=X+13,b=Y+12;ink(x);
    if(t.imp==='mine'){x.beginPath();x.moveTo(a-9,b+8);x.lineTo(a-9,b-2);x.arc(a,b-2,9,Math.PI,0);x.lineTo(a+9,b+8);x.closePath();blob(x,'#2e2118');stick(x,a-9,b+8,a-9,b-4,2.2,WOOD);stick(x,a+9,b+8,a+9,b-4,2.2,WOOD);stick(x,a-11,b-5,a+11,b-5,2.6,WOOD);circ(x,a-1,b+5,2.6,'#9aa3ad');circ(x,a+3.5,b+5.5,2.2,'#c9a43a')}
@@ -946,18 +1064,20 @@ function renderBG(v){const x=bgx,{r0,r1,c0,c1,z}=v;if(bgc.width!==cv.width||bgc.
    else if(t.imp==='pasture'){for(const k of[-10,0,10])stick(x,a+k,b+8,a+k,b-7,1.9,'#efe0b8');stick(x,a-11,b-3,a+11,b-3,1.7,'#efe0b8');stick(x,a-11,b+4,a+11,b+4,1.7,'#efe0b8')}
    else if(t.imp==='quarry'){rr(x,a-10,b-1,11,9,1,'#cfcfcf');rr(x,a,b-6,10,14,1,'#b9b9b9');rr(x,a-6,b-9,8,8,1,'#dedede')}
    else{const rc=t.res?RES[t.res].col:'#e0633a';for(const q of[-3,5])for(const k of[-8,0,8]){circ(x,a+k,b+q,3.6,'#4fae4a');x.fillStyle=rc;x.beginPath();x.arc(a+k+1,b+q-1,1.3,0,7);x.fill()}}}
-  if(t.res&&V.res){const R_=RES[t.res],a=X-15,b=Y+13;x.lineWidth=2;circ(x,a,b,9.5,R_.col);resIcon(x,t.res,a,b,R_.dk?'#fff':'#1d1508');ink(x)}
-  if(!vis[i]){hexPath(x,X,Y,HC);x.fillStyle='rgba(14,22,40,.45)';x.fill()}}
- x.strokeStyle='#4a7a2a';x.lineWidth=3.2;x.beginPath();for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r);if(!seen[i]||!isFarm(G.tiles[i]))continue;const X=hx(c,r),Y=hy(r);
+  if(t.res&&V.res){const R_=RES[t.res],a=X-17,b=Y+15;drawRes(x,t.res,X,Y,hs);ink(x);circ(x,a,b,7.5,R_.col);x.save();x.translate(a,b);x.scale(.74,.74);resIcon(x,t.res,0,0,R_.dk?'#fff':'#1d1508');x.restore();ink(x)}
+  if(t.silo){ink(x);circ(x,X+1,Y-2,11,'#b9bec4');circ(x,X+1,Y-2,6.5,'#3d4249');poly(x,[X+1,Y-9,X+4.5,Y-2,X-2.5,Y-2],'#ff6a55')}
+  if(t.fall){hexPath(x,X,Y,HC);x.fillStyle='rgba(150,165,40,.38)';x.fill();x.fillStyle='rgba(60,70,10,.5)';for(let k=0;k<6;k++){x.beginPath();x.arc(X+((hs*13+k*29)%44)-22,Y+((hs*7+k*17)%36)-18,1.8,0,7);x.fill()}}
+  if(!vis[i]){hexPath(x,X,Y,HC);x.fillStyle='rgba(45,58,88,.4)';x.fill()}}
+ softInk=false;x.strokeStyle='#8fbb6c';x.lineWidth=3;x.beginPath();for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r);if(!seen[i]||!isFarm(G.tiles[i]))continue;const X=hx(c,r),Y=hy(r);
   for(let d=0;d<6;d++){const n=nb(c,r,d),j=n?idx(n[0],n[1]):-1;if(j>=0&&seen[j]&&isFarm(G.tiles[j]))continue;const[a,b]=EDGE[d];x.moveTo(X+COR[a][0],Y+COR[a][1]);x.lineTo(X+COR[b][0],Y+COR[b][1])}}x.stroke();
- for(const pass of[[OUT,7],['#d9b072',4]]){x.strokeStyle=pass[0];x.lineWidth=pass[1];x.beginPath();
+ for(const pass of[['#b39472',7],['#f0dcb4',4]]){x.strokeStyle=pass[0];x.lineWidth=pass[1];x.beginPath();
   for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r),t=G.tiles[i];if(!seen[i]||!(t.road||t.city))continue;const X=hx(c,r),Y=hy(r);let any=false;
    for(let d=0;d<6;d++){const n=nb(c,r,d);if(!n)continue;const j=idx(n[0],n[1]),tj=G.tiles[j];if(!(tj.road||tj.city)||!seen[j])continue;any=true;if(j>i){x.moveTo(X,Y);x.lineTo(hx(n[0],n[1]),hy(n[1]))}}
    if(!any&&t.road){x.moveTo(X-5,Y);x.lineTo(X+5,Y)}}x.stroke()}
  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r);if(!seen[i])continue;const o=ownerOf(i);if(o<0)continue;const X=hx(c,r),Y=hy(r);
-  for(let d=0;d<6;d++){const n=nb(c,r,d);if(n&&ownerOf(idx(n[0],n[1]))===o)continue;const[a,b]=EDGE[d];for(const[col,lw]of[[OUT,6.5],[G.players[o].color,4]]){x.strokeStyle=col;x.lineWidth=lw;x.beginPath();x.moveTo(X+COR[a][0]*.9,Y+COR[a][1]*.9);x.lineTo(X+COR[b][0]*.9,Y+COR[b][1]*.9);x.stroke()}}}
- {const WC=['#b07a3e','#c2bbae','#b3aea6','#9aa5b1','#89919b','#737a84'];
-  for(const pass of[0,1])for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r),t=G.tiles[i];if(!seen[i]||!t.wall)continue;const X=hx(c,r),Y=hy(r),col=WC[t.wall.lvl]||WC[5];ink(x);
+  for(let d=0;d<6;d++){const n=nb(c,r,d);if(n&&ownerOf(idx(n[0],n[1]))===o)continue;const[a,b]=EDGE[d];for(const[col,lw]of[['rgba(255,255,255,.85)',6.5],[G.players[o].color,3.6]]){x.strokeStyle=col;x.lineWidth=lw;x.beginPath();x.moveTo(X+COR[a][0]*.9,Y+COR[a][1]*.9);x.lineTo(X+COR[b][0]*.9,Y+COR[b][1]*.9);x.stroke()}}}
+ {const WC=['#b07a3e','#c2bbae','#b3aea6','#9aa5b1','#89919b','#737a84','#5f666f'];
+  for(const pass of[0,1])for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const i=idx(c,r),t=G.tiles[i];if(!seen[i]||!t.wall)continue;const X=hx(c,r),Y=hy(r),col=WC[t.wall.lvl]||WC[6];ink(x);
    if(!pass){for(let d=0;d<6;d++){const n=nb(c,r,d);if(!n)continue;const j=idx(n[0],n[1]);if(j<i||!G.tiles[j].wall||!seen[j])continue;const X2=hx(n[0],n[1]),Y2=hy(n[1]);stick(x,X,Y,X2,Y2,8,col);x.strokeStyle='rgba(43,28,16,.4)';x.lineWidth=2;x.setLineDash([3,6]);x.beginPath();x.moveTo(X,Y-1);x.lineTo(X2,Y2-1);x.stroke();x.setLineDash([]);ink(x)}}
    else{rr(x,X-8,Y-11,16,19,2,col);x.fillStyle=col;for(const k of[-8,-2.5,3]){x.beginPath();x.rect(X+k,Y-15.5,5,4.5);x.fill();x.stroke()}x.fillStyle=OUT;x.fillRect(X-2,Y-1,4,7);
     const mh=wallMax(t.wall.lvl);if(t.wall.hp<mh){x.fillStyle=OUT;x.fillRect(X-13,Y+10,26,5.5);x.fillStyle='#e8e8e8';x.fillRect(X-12,Y+11,24*t.wall.hp/mh,3.5)}}}}
@@ -981,6 +1101,12 @@ function renderBG(v){const x=bgx,{r0,r1,c0,c1,z}=v;if(bgc.width!==cv.width||bgc.
   if(su.goto!=null){const[c,r]=cr(su.goto);x.strokeStyle='#fff36b';x.lineWidth=3;x.beginPath();x.arc(hx(c,r),hy(r),9,0,7);x.stroke()}}}
 function render(now){if(!G)return;const v=viewport(),{r0,r1}=v;if(cv.width!==Math.round(v.w*v.dpr)||cv.height!==Math.round(v.h*v.dpr)){cv.width=Math.round(v.w*v.dpr);cv.height=Math.round(v.h*v.dpr);dirty=true}
  if(dirty){dirty=false;renderBG(v)}const x=ctx,seen=human().seen;x.setTransform(1,0,0,1,0,0);x.drawImage(bgc,0,0);setT(x,v);labels=[];x.lineJoin='round';x.lineCap='round';
+ if(V.feat||V.res)for(let r=r0;r<=r1;r++)for(let c=v.c0;c<=v.c1;c++){const i=idx(c,r);if(!seen[i])continue;const t=G.tiles[i],X=hx(c,r),Y=hy(r);
+  if(V.feat&&TERR[t.t].water){const ph=c*.37+r*.61,d=(now/2600+ph)%1,ox=(d-.5)*17,d2=(now/3400+ph*1.7)%1,o2=(.5-d2)*17,dim=vis[i]?1:.45;x.lineWidth=2;
+   x.strokeStyle=`rgba(255,255,255,${Math.sin(d*Math.PI)*.8*dim})`;x.beginPath();x.moveTo(X-10+ox,Y-7);x.quadraticCurveTo(X-5+ox,Y-12,X+ox,Y-7);x.quadraticCurveTo(X+5+ox,Y-2,X+10+ox,Y-7);x.stroke();
+   x.strokeStyle=`rgba(255,255,255,${Math.sin(d2*Math.PI)*.7*dim})`;x.beginPath();x.moveTo(X-8+o2,Y+9);x.quadraticCurveTo(X-3+o2,Y+4,X+2+o2,Y+9);x.stroke();
+   if(t.res==='fish'&&V.res&&vis[i]){const p=(now/1900+i*.21)%1;x.strokeStyle=`rgba(255,255,255,${1-p})`;x.lineWidth=1.6;x.beginPath();x.ellipse(X+3,Y-1,5+p*12,2.5+p*5,0,0,7);x.stroke()}}
+  else if(V.res&&vis[i]&&(t.res==='gems'||t.res==='silver'))for(let k=0;k<3;k++){const p=(now/1000+i*.137+k*.37)%1,s=Math.sin(p*Math.PI)*5.5,sx=X+((i*7+k*23)%26)-13,sy=Y+((i*5+k*17)%20)-12;x.strokeStyle='#fff';x.lineWidth=1.7;x.beginPath();x.moveTo(sx-s,sy);x.lineTo(sx+s,sy);x.moveTo(sx,sy-s);x.lineTo(sx,sy+s);x.stroke()}}
  x.setLineDash([3,7]);x.lineWidth=2.6;for(const rt of G.routes){const a=CM.get(rt.a),b=CM.get(rt.b);if(!V.routes||!a||!b||!seen[idx(a.c,a.r)]||!seen[idx(b.c,b.r)])continue;x.strokeStyle=rt.own===0?'#fff36b':'rgba(255,240,200,.6)';x.lineDashOffset=-now/90;x.beginPath();x.moveTo(hx(a.c,a.r),hy(a.r));x.lineTo(hx(b.c,b.r),hy(b.r));x.stroke()}x.setLineDash([]);
  for(const ct of G.cities){const i=idx(ct.c,ct.r);if(!seen[i]||ct.r<r0-1||ct.r>r1+1)continue;const X=hx(ct.c,ct.r),Y=hy(ct.r),pc=G.players[ct.own].color;drawCity(x,ct,X,Y,now);
   x.font='600 12.5px Fredoka,Nunito,sans-serif';const nm=ct.name+(ct.cap?' ★':''),tw=x.measureText(nm).width+34+(ct.rel!=null?12:0),lx=X-tw/2,ly=Y-S0-12;ink(x);
@@ -992,12 +1118,26 @@ function render(now){if(!G)return;const v=viewport(),{r0,r1}=v;if(cv.width!==Mat
   labels.push({id:ct.id,x:lx,y:ly-7,w:tw,h:31})}
  const us=G.units.filter(u=>vis[idx(u.c,u.r)]&&u.r>=r0-1&&u.r<=r1+1).sort((a,b)=>a.r-b.r||(UNITS[a.type].str?1:0)-(UNITS[b.type].str?1:0));for(const f of fxs)if(f.ghost)drawUnit(x,f.ghost,now);for(const u of us)drawUnit(x,u,now);
  fxs=fxs.filter(f=>now-f.t<(f.life||1100));for(const f of fxs){if(now<f.t||f.ghost)continue;const[c,r]=cr(f.i),k=(now-f.t)/1100,X=hx(c,r),Y=hy(r);
+  if(f.nuke){const el=now-f.t,q=Math.min(1,el/2400),[fc,fr]=cr(f.from),ax=hx(fc,fr),ay=hy(fr),L=Math.hypot(X-ax,Y-ay),mx=(ax+X)/2,my=(ay+Y)/2-Math.max(60,L*.38);
+   const bz=u=>[(1-u)*(1-u)*ax+2*(1-u)*u*mx+u*u*X,(1-u)*(1-u)*ay+2*(1-u)*u*my+u*u*Y];x.globalAlpha=el<2400?1:Math.max(0,1-(el-2400)/900);
+   for(const[col,lw]of[['rgba(120,0,0,.55)',6],['#ff3b2f',2.8]]){x.strokeStyle=col;x.lineWidth=lw;x.setLineDash(lw>3?[]:[9,6]);x.beginPath();for(let u=0;u<=q+.001;u+=.04){const[px,py]=bz(Math.min(u,q));x[u?'lineTo':'moveTo'](px,py)}x.stroke()}x.setLineDash([]);x.globalAlpha=1;
+   if(el<2400){const[px,py]=bz(q);x.fillStyle='#fff';x.beginPath();x.arc(px,py,4.5,0,7);x.fill();x.strokeStyle='#ff3b2f';x.lineWidth=2;x.stroke();x.strokeStyle='#ff3b2f';x.lineWidth=2;x.beginPath();x.arc(X,Y,14+Math.sin(now/90)*3,0,7);x.moveTo(X-20,Y);x.lineTo(X+20,Y);x.moveTo(X,Y-20);x.lineTo(X,Y+20);x.stroke()}
+   else{const b=el-2400;if(b<700){const s=b/700;x.globalAlpha=1-s*.7;for(const[col,rr2]of[['#fff7c2',150*s],['#ffb347',105*s],['#ff5a2f',65*s]]){x.fillStyle=col;x.beginPath();x.arc(X,Y,rr2+8,0,7);x.fill()}x.globalAlpha=1}
+    if(b>250){const s=Math.min(1,(b-250)/1500),al=b>2400?Math.max(0,1-(b-2400)/800):1;x.globalAlpha=al*.92;x.fillStyle='#6b5f58';x.beginPath();x.rect(X-7,Y-70*s,14,70*s+6);x.fill();x.fillStyle='#8a7d74';for(const[dx,dy,r2]of[[0,0,26],[-18,6,17],[18,6,17],[0,-12,19]]){x.beginPath();x.arc(X+dx*s,Y-70*s+dy*s,r2*s+3,0,7);x.fill()}x.fillStyle='#ffb347';x.beginPath();x.arc(X,Y-70*s,9*s,0,7);x.fill();x.globalAlpha=1}}
+   continue}
+  if(f.plane){const el=now-f.t,q=el/700,[fc,fr]=cr(f.from),ax=hx(fc,fr),ay=hy(fr)-34,u=q<1?q:Math.max(0,2-q*.95),px=ax+(X-ax)*u,py=ay+(Y-34-ay)*u,dir=(q<1?1:-1)*(X>=ax?1:-1);if(q>2.1)continue;
+   x.save();x.translate(px,py);x.scale(dir,1);ink(x);poly(x,[-11,0,9,-2.5,13,0,9,2.5],'#cfd6dc');poly(x,[-2,-1,3,-11,6,-11,4,-1],'#aab3bb');poly(x,[-2,1,3,11,6,11,4,1],'#aab3bb');poly(x,[-11,0,-14,-5,-11,-5,-8,0],'#aab3bb');x.restore();
+   if(q>=.95&&q<1.5){x.globalAlpha=1-(q-.95)/.55;x.fillStyle='#ffb347';x.beginPath();x.arc(X,Y-4,10+(q-.95)*40,0,7);x.fill();x.globalAlpha=1}continue}
   if(f.proj){const q=k*1100/420;if(q>1)continue;const[fc,fr]=cr(f.from),ax=hx(fc,fr),ay=hy(fr)-14,px=ax+(X-ax)*q,py=ay+(Y-10-ay)*q-Math.sin(q*Math.PI)*22;ink(x);
    if(f.proj==='arrow'){const q2=Math.max(0,q-.08),px2=ax+(X-ax)*q2,py2=ay+(Y-10-ay)*q2-Math.sin(q2*Math.PI)*22;stick(x,px2,py2,px,py,1.6,'#f3e7c0')}else circ(x,px,py,3.4,f.proj==='rock'?'#a9a9a9':'#333');continue}
   if(f.poof){const q=k*1100/520;if(q>1)continue;x.globalAlpha=1-q;x.fillStyle='#fff';for(let j=0;j<6;j++){const a=j*1.05+f.i;x.beginPath();x.arc(X+Math.cos(a)*q*20,Y-6+Math.sin(a)*q*13,7*(1-q*.5),0,7);x.fill()}x.globalAlpha=1;continue}
   x.globalAlpha=1-k;
   if(f.ring){x.strokeStyle='#fff';x.lineWidth=2.5;for(const q of[0,.3]){const kk=Math.min(1,k*1.6+q);x.beginPath();x.ellipse(X,Y+8,8+kk*22,4+kk*10,0,0,7);x.stroke()}x.globalAlpha=1;continue}
   x.font='700 18px Fredoka,Nunito,sans-serif';x.textAlign='center';x.lineWidth=4;x.strokeStyle=OUT;x.strokeText(f.txt,X,Y-22-k*24);x.fillStyle=f.col;x.fillText(f.txt,X,Y-22-k*24)}x.globalAlpha=1;
+ if(mode){x.lineWidth=2.5;x.setLineDash([8,6]);if(mode.k==='air'){const c=CM.get(mode.city);if(c){x.strokeStyle='#ffd24a';x.beginPath();x.arc(hx(c.c,c.r),hy(c.r),6.5*SQ*S0,0,7);x.stroke()}}
+  else{x.strokeStyle='rgba(255,59,47,.8)';for(const p of platforms(0))if(p.ready){const[c,r]=cr(p.i);x.beginPath();x.arc(hx(c,r),hy(r),(p.rng+.5)*SQ*S0,0,7);x.stroke()}}x.setLineDash([])}
+ if(nukeT.size){x.strokeStyle='#ff3b2f';x.lineWidth=3;for(const i of nukeT){const[c,r]=cr(i),X=hx(c,r),Y=hy(r),s=16+Math.sin(now/160)*2;x.beginPath();x.arc(X,Y,s,0,7);x.moveTo(X-s-7,Y);x.lineTo(X+s+7,Y);x.moveTo(X,Y-s-7);x.lineTo(X,Y+s+7);x.stroke()}}
+ for(const ct of G.cities){if(!ct.air||!seen[idx(ct.c,ct.r)])continue;for(let k=0;k<Math.min(3,ct.air);k++){const a=now/1400+k*2.1+ct.id,px=hx(ct.c,ct.r)+Math.cos(a)*30,py=hy(ct.r)-34+Math.sin(a)*9;x.save();x.translate(px,py);x.scale(Math.sin(a)>0?-.6:.6,.6);ink(x);poly(x,[-11,0,9,-2.5,13,0,9,2.5],'#cfd6dc');poly(x,[-2,-1,3,-11,6,-11,4,-1],G.players[ct.own].color);poly(x,[-2,1,3,11,6,11,4,1],G.players[ct.own].color);x.restore()}}
  if(miniDirty)drawMini()}
 function drawMini(){miniDirty=false;const s=Math.max(2,Math.floor(170/G.W));mini.width=Math.ceil((G.W+.5)*s);mini.height=Math.ceil(G.H*s*.87)+1;const seen=human().seen;mctx.fillStyle='#0a0f14';mctx.fillRect(0,0,mini.width,mini.height);
  for(let r=0;r<G.H;r++)for(let c=0;c<G.W;c++){const i=idx(c,r);if(!seen[i])continue;const o=ownerOf(i);mctx.fillStyle=o>=0?G.players[o].color:TERR[G.tiles[i].t].col;mctx.fillRect((c+.5*(r&1))*s,r*s*.87,s,s)}
@@ -1014,27 +1154,29 @@ function ui(){if(!G)return;if(pend&&pend.u!==sel)pend=null;const h=human(),inc=i
  <span><i class="dot" style="background:var(--sci)"></i><b>${sg(inc.s)}</b> science · ${esc(rt)}</span><span><i class="dot" style="background:var(--cul)"></i><b>${Math.floor(h.culture)}</b>${availPol(h).length?'/'+policyCost(h):''} culture (${sg(inc.c)})</span>
  <span><i class="dot" style="background:${hp<0?'var(--bad)':'var(--good)'}"></i><b>${hp}</b> happiness<span class="xl"> · ${ht}</span></span><span><i class="dot" style="background:#f3efe2"></i><b>${Math.floor(h.faith)}</b> faith (${sg(inc.fa)})</span>`;
  $('#bTech').classList.toggle('need',!h.research&&availTechs(h).length>0);$('#bPol').classList.toggle('need',h.culture>=policyCost(h)&&availPol(h).length>0);$('#bRel').classList.toggle('need',canFoundRel(h));
- const p=pending();$('#bEnd').textContent=p.l;$('#bSub').hidden=!p.soft;
+ const p=pending();$('#bEnd').textContent=p.l;$('#bEnd').classList.toggle('ready',p.l==='End turn');$('#bSub').hidden=!p.soft;
  const u=selUnit(),box=$('#unit');
  if(u&&vis[idx(u.c,u.r)]&&!(cityOpen&&CM.get(cityOpen)&&CM.get(cityOpen).own===0)){const d=UNITS[u.type],mine=u.own===0,b=[];
   if(mine){const can=u.mv>0;if(u.type==='settler')b.push(`<button class="primary" data-act="found" ${can&&canFound(u)?'':'disabled'}>Found city</button>`);
-   if(u.type==='worker'){const m=canImprove(u);b.push(`<button class="primary" data-act="improve" ${can&&m?'':'disabled'}>${m?'Build '+IMP[m].n.toLowerCase():'Nothing to improve here'}</button><button data-act="road" ${can&&canRoad(u)?'':'disabled'}>Build road</button><button data-act="wall" ${can&&canWall(u)?'':'disabled'}>Build wall</button>${G.tiles[idx(u.c,u.r)].f&&!G.tiles[idx(u.c,u.r)].city?`<button data-act="clear" ${can&&canClear(u)?'':'disabled'}>${h.techs.bronze?(ownerOf(idx(u.c,u.r))===0?'Clear forest (+'+chopYield(h)+' production)':'Clear forest (your land only)'):'Clear forest (needs Bronze Working)'}</button>`:''}<button data-act="auto">${u.auto?'Stop automating':'Automate'}</button>`)}
+   if(u.type==='worker'){const m=canImprove(u);b.push(`<button class="primary" data-act="improve" ${can&&m?'':'disabled'}>${m?'Build '+IMP[m].n.toLowerCase():'Nothing to improve here'}</button><button data-act="road" ${can&&canRoad(u)?'':'disabled'}>${h.techs.wheel?'Build road':'Build road (needs The Wheel)'}</button><button data-act="wall" ${can&&canWall(u)?'':'disabled'}>Build wall</button>${h.techs.rocketry?`<button data-act="silo" ${can&&canSilo(u)?'':'disabled'}>Build missile silo</button>`:''}${G.tiles[idx(u.c,u.r)].f&&!G.tiles[idx(u.c,u.r)].city?`<button data-act="clear" ${can&&canClear(u)?'':'disabled'}>${h.techs.bronze?(ownerOf(idx(u.c,u.r))===0?'Clear forest (+'+chopYield(h)+' production)':'Clear forest (your land only)'):'Clear forest (needs Bronze Working)'}</button>`:''}<button data-act="auto">${u.auto?'Stop automating':'Automate'}</button>`)}
    if(u.type==='caravan'){const c=canTrade(u);b.push(`<button class="primary" data-act="trade" ${c?'':'disabled'}>${c?'Open trade route with '+esc(c.name)+' (+'+routeGold(h,homeOf(u),c)+' gold)':G.routes.filter(r=>r.own===0).length>=routeCap(h)?'All '+routeCap(h)+' trade routes in use':'Move next to another city to trade'}</button>`)}
    if(u.type==='missionary'){const c=canSpread(u);b.push(`<button class="primary" data-act="spread" ${c?'':'disabled'}>${c?'Preach in '+esc(c.name):'Move next to a city of another faith'}</button>`)}
    if(u.type==='scout'||d.naval)b.push(`<button class="${u.explore||d.naval?'':'primary'}" data-act="explore">${u.explore?'Stop exploring':'Auto explore'}</button>`);
    if(d.str)b.push(`<button data-act="fort" ${can?'':'disabled'}>Fortify</button>`);if(d.str&&(u.drill||u.xp<DRILLCAP))b.push(`<button data-act="drill">${u.drill?'Stop drilling':'Drill (+2 XP a turn, to '+DRILLCAP+')'}</button>`);else b.push(`<button data-act="sleep">Sleep</button>`);
+   {const o2=(d.str?cAt:uAt).get(idx(u.c,u.r));if(o2&&o2.own===0)b.push(`<button data-act="escort">${partner(u)?'Stop escorting':d.str?'Escort the '+UNITS[o2.type].n:'Travel with the '+UNITS[o2.type].n}</button>`)}
    b.push(`<button data-act="skip">Skip turn</button>`);const uc=upgradeCost(u);if(uc!=null&&ownerOf(idx(u.c,u.r))===0)b.push(`<button data-act="upgrade" ${h.gold>=uc&&can?'':'disabled'}>Upgrade to ${UNITS[d.up].n} (${uc}g)</button>`);
    b.push(`<button class="warn" data-act="disband">Disband</button>`)}
-  const emb=!d.naval&&isWater(idx(u.c,u.r)),st=u.work?`${u.work.imp==='clear'?'clearing forest':'building '+(IMP[u.work.imp]||{n:u.work.imp}).n.toLowerCase()} (${u.work.left})`:u.auto?'automated':u.explore?'exploring':u.drill?'drilling':u.fort?'fortified':u.sleep?'sleeping':u.goto!=null?'moving':emb?'embarked':'';
-  box.innerHTML=`<div class="row"><h3>${d.n}</h3><button data-act="desel" aria-label="Deselect">✕</button></div>
+  const emb=!d.naval&&isWater(idx(u.c,u.r)),st=u.work?`${u.work.imp==='clear'?'clearing forest':'building '+(IMP[u.work.imp]||{n:u.work.imp==='silo'?'missile silo':u.work.imp}).n.toLowerCase()} (${u.work.left})`:partner(u)&&!u.work?(d.str?'escorting':'under escort'):u.auto?'automated':u.explore?'exploring':u.drill?'drilling':u.fort?'fortified':u.sleep?'sleeping':u.goto!=null?'moving':emb?'embarked':'';
+  box.innerHTML=`<div class="row"><canvas id="pt" width="96" height="96"></canvas><h3 style="flex:1">${d.n}</h3><button data-act="desel" aria-label="Deselect">✕</button></div>
   <div class="meta">${esc(G.players[u.own].name)} · HP ${Math.round(u.hp)} · ${d.str?'strength '+d.str+(d.rs?' / ranged '+d.rs:'')+' · ':''}moves ${mine?Math.max(0,Math.ceil(u.mv))+'/':''}${mvOf(u)}${st?' · '+st:''}${d.str?' · XP '+u.xp:''}${promoList(u)?'<br>Promotions: '+promoList(u):''}${isMil(u)&&inArmy(u)?'<br><b style="color:var(--brass)">Army of '+armySize(u)+'</b>: +20% strength, shrugs off suppression, mends 5 HP a turn even after fighting':''}${u.sup&&!inArmy(u)?'<br><b style="color:var(--sci)">Suppressed</b>: 20% weaker and 1 move slower until the end of its next turn':''}${u.rout?'<br><b style="color:var(--bad)">Routed</b>: cannot attack and fights 30% weaker until the end of its next turn':''}</div>
-  ${pv&&mine?`<div class="pv">${esc(pv.txt)}</div>`:''}${pend&&mine?`<div class="pv promo">Move here? It takes about ${pend.t} turn${pend.t>1?'s':''}. Tap the same tile again to go.<div class="acts"><button class="primary" data-act="go">Move</button><button data-act="cancelMove">Cancel</button></div></div>`:''}${mine&&pendingPromo(u)>0?`<div class="pv promo"><b>Promotion earned.</b> Pick one:<div class="acts">${promoOpts(u).map(k=>`<button data-act="promo" data-arg="${k}"><b>${PROMO[k].n}${(u.pr&&u.pr[k])?' II':''}</b> <small>${PROMO[k].d}</small></button>`).join('')}<button data-act="promo" data-arg="heal"><b>Field medic</b> <small>Heal 50 HP now instead</small></button></div></div>`:''}<div class="acts">${b.join('')}</div>`;box.hidden=false}
+  ${pv&&mine?`<div class="pv">${esc(pv.txt)}</div>`:''}${pend&&mine?`<div class="pv promo">Move here? It takes about ${pend.t} turn${pend.t>1?'s':''}. Tap the same tile again to go.<div class="acts"><button class="primary" data-act="go">Move</button>${pend.o&&G.units.find(z=>z.id===pend.o)?`<button data-act="selOther">Select the ${UNITS[G.units.find(z=>z.id===pend.o).type].n} there</button>`:''}<button data-act="cancelMove">Cancel</button></div></div>`:''}${mine&&pendingPromo(u)>0?`<div class="pv promo"><b>Promotion earned.</b> Pick one:<div class="acts">${promoOpts(u).map(k=>`<button data-act="promo" data-arg="${k}"><b>${PROMO[k].n}${(u.pr&&u.pr[k])?' II':''}</b> <small>${PROMO[k].d}</small></button>`).join('')}<button data-act="promo" data-arg="heal"><b>Field medic</b> <small>Heal 50 HP now instead</small></button></div></div>`:''}<div class="acts">${b.join('')}</div>`;box.hidden=false;portrait($('#pt'),u)}
  else box.hidden=true;
+ modeBar();$('#bNuke').hidden=!(h.prog||h.nukes>0);
  const ib=$('#info');if(info!=null&&!cityOpen){ib.innerHTML=infoHTML(info);ib.hidden=false}else ib.hidden=true;
  renderCity();dirty=true}
 function infoHTML(i){const t=G.tiles[i],Tt=TERR[t.t],h=human(),y=tileYield(i,h),o=ownerOf(i),yl=d=>[d.f&&'+'+d.f+' food',d.p&&'+'+d.p+' production',d.g&&'+'+d.g+' gold'].filter(Boolean).join(', ');
  let s=`<div class="row"><h3>${Tt.n}${t.h?' hills':''}${t.f?' forest':''}</h3><button data-act="closeInfo" aria-label="Close">✕</button></div>
- <div class="meta">${y.f} food · ${y.p} production · ${y.g} gold · ${o>=0?esc(G.players[o].name):'unclaimed'}${Tt.block?' · impassable':Tt.water?'':t.h||t.f?' · 2 moves to enter, +25% defense':' · 1 move to enter'}${t.road?' · road':''}${t.imp?' · '+IMP[t.imp].n.toLowerCase():''}</div>${t.wall?`<div class="pv" style="border-color:#c2bbae"><b>${ERAS[t.wall.lvl]} wall</b> · HP ${Math.round(t.wall.hp)}/${wallMax(t.wall.lvl)}<br>Enemies cannot enter this tile until the wall is breached. Defenders standing on it fight 50% stronger. Siege engines do the most damage to it.</div>`:''}`;
+ <div class="meta">${y.f} food · ${y.p} production · ${y.g} gold · ${o>=0?esc(G.players[o].name):'unclaimed'}${Tt.block?' · impassable':Tt.water?'':t.h||t.f?' · 2 moves to enter, +25% defense':' · 1 move to enter'}${t.road?' · road':''}${t.imp?' · '+IMP[t.imp].n.toLowerCase():''}</div>${t.silo?'<div class="pv" style="border-color:#ff6a55"><b>Missile silo</b><br>Launches one warhead a turn at anything within 14 tiles.</div>':''}${t.fall?`<div class="pv" style="border-color:#b7c64a"><b>Fallout</b> for ${t.fall} more turns<br>No food or gold, half production. Units ending their turn here lose 15 HP.</div>`:''}${t.wall?`<div class="pv" style="border-color:#c2bbae"><b>${ERAS[t.wall.lvl]} wall</b> · HP ${Math.round(t.wall.hp)}/${wallMax(t.wall.lvl)}<br>Enemies cannot enter this tile until the wall is breached. Defenders standing on it fight 50% stronger. Siege engines do the most damage to it.</div>`:''}`;
  if(t.res){const k=t.res,r=RES[k],m=r.imp&&IMP[r.imp],us=Object.values(UNITS).filter(u=>u.res===k).map(u=>u.n).join(', ');
   s+=`<div class="pv" style="border-color:${r.col}"><b>${r.n}</b> · ${r.strat?'strategic resource':r.lux?'luxury resource':'bonus resource'}<br>${RDESC[k]} This tile gets ${yl(r)}.`+
   (r.strat?`<br>Having it inside your borders lets you build ${us}.`:'')+(r.lux?'<br>Each different luxury inside your borders gives +4 happiness. A spare source can be sold to a rival.':'')+
@@ -1046,37 +1188,47 @@ function renderCity(){const el=$('#city'),c=cityOpen&&CM.get(cityOpen);if(!c||c.
  const cur=c.build?`<div class="row"><b>${itemName(c.build)}</b><span>${Math.floor(c.prod)}/${itemCost(pl,c.build)} · ${Math.max(1,Math.ceil((itemCost(pl,c.build)-c.prod)/Math.max(1,y.p*bonusP(pl,c.build))))} turns</span></div><div class="meter"><i style="width:${Math.min(100,c.prod/itemCost(pl,c.build)*100)}%"></i></div>
   ${c.build.k==='u'||c.build.k==='b'?`<button style="margin-top:6px" data-act="buy" ${pl.gold>=buyCost(c)?'':'disabled'}>Buy now for ${buyCost(c)} gold</button>`:''}`:'<b style="color:var(--brass)">Nothing in production. Pick something below.</b>';
  const opts=buildOptions(c),grp=(k,t)=>{const l=opts.filter(o=>o.k===k);if(!l.length)return'';return`<h4>${t}</h4>`+l.map(o=>{const d=k==='u'?UNITS[o.id]:k==='b'?BLD[o.id]:k==='w'?WON[o.id]:null,cost=itemCost(pl,o),on=c.build&&c.build.k===o.k&&c.build.id===o.id;
-   return`<button class="opt${on?' cur':''}" data-act="build" data-arg="${o.k}:${o.id}"><span>${itemName(o)}${k==='p'?' '+(pl.ship+1)+' of 3':''}<small>${k==='u'?uDesc(d):k==='p'?'Complete all three to win':k==='x'?'Rebuilds every wall segment this city leads to the '+ERAS[eraOf(pl)]+' standard at full strength':bDesc(d)}</small></span><span class="c">${cost}<small>${Math.max(1,Math.ceil((cost-(on?c.prod:Math.min(c.prod,0)))/Math.max(1,y.p*bonusP(pl,o))))} turns</small></span></button>`}).join('')};
+   return`<button class="opt${on?' cur':''}" data-act="build" data-arg="${o.k}:${o.id}"><span>${itemName(o)}${o.id==='ship'?' '+(pl.ship+1)+' of 3':''}<small>${k==='u'?uDesc(d):k==='p'?(o.id==='ship'?'Complete all three to win':PROJ[o.id].d):k==='x'?'Rebuilds every wall segment this city leads to the '+ERAS[eraOf(pl)]+' standard at full strength':bDesc(d)}</small></span><span class="c">${cost}<small>${Math.max(1,Math.ceil((cost-(on?c.prod:Math.min(c.prod,0)))/Math.max(1,y.p*bonusP(pl,o))))} turns</small></span></button>`}).join('')};
  const rts=G.routes.filter(r=>r.a===c.id||r.b===c.id).map(r=>{const o=CM.get(r.a===c.id?r.b:r.a);return esc(o?o.name:'?')+(r.own===0?' (+'+r.g+' gold, ':' (+1 gold, ')+(r.until-G.turn)+' turns)'}).join(', ');
  el.innerHTML=`<div class="row"><h2>${esc(c.name)}${c.cap?' ★':''}</h2><button data-act="closeCity" aria-label="Close">✕</button></div>
  <div style="color:var(--dim)">Population ${c.pop} · ${gt} · defense ${Math.round(cityStr(c))} · HP ${Math.round(c.hp)}/${cityMaxHp(c)}</div>
  <div class="meter"><i style="width:${Math.min(100,c.food/need*100)}%;background:var(--good)"></i></div>
  <div class="yl"><div><small>Food</small>${y.surplus>=0?'+':''}${y.surplus}</div><div><small>Prod</small>${y.p}</div><div><small>Gold</small>${y.g-y.maint}</div><div><small>Sci</small>${y.s}</div><div><small>Cult</small>${y.c}</div><div><small>Faith</small>${y.fa}</div></div>
  <div style="color:var(--dim);margin-top:7px">${c.rel!=null?'Follows '+esc(G.rels[c.rel].name):'No religion'} · ${c.cap?'Capital':y.conn?'Linked to the capital (+'+(2+Math.floor(c.pop/4))+' gold)':'No road or harbor link to the capital'}${rts?'<br>Trade: '+rts:''}</div>
+ ${c.air?`<div class="row" style="margin-top:8px"><span>Bomber wings: <b>${c.air}</b> (${airReady(c)} ready)</span><button data-act="airMode" ${airReady(c)>0?'':'disabled'}>Air strike</button></div>`:''}
  <h4>Citizens work for</h4><div class="seg">${Object.keys(FOCUS).map(k=>`<button class="${(c.focus||'bal')===k?'on':''}" data-act="focus" data-arg="${k}">${FOCUS[k].n}</button>`).join('')}</div>
- <h4>Producing</h4>${cur}${grp('p','Project')}${grp('x','Walls')}${grp('u','Units')}${grp('b','Buildings')}${grp('w','Wonders')}
+ <h4>Producing</h4>${cur}${grp('p','Projects')}${grp('x','Walls')}${grp('u','Units')}${grp('b','Buildings')}${grp('w','Wonders')}
  <h4>Built here</h4><div style="color:var(--dim)">${c.b.length?c.b.map(b=>(BLD[b]||WON[b]).n).join(', '):'Nothing yet'}</div>`;el.hidden=false}
 function modal(html){$('#mbody').innerHTML=html;$('#modal').hidden=false}
 function closeModal(){$('#modal').hidden=true;askFns=[];nextAsk()}
 function nextAsk(){if(!$('#modal').hidden||!asks.length)return;const a=asks.shift();modal(a.h+`<div class="foot">${a.b.map((b,i)=>`<button class="${b[2]||''}" data-act="ask" data-arg="${i}">${b[0]}</button>`).join('')}</div>`);askFns=a.b.map(b=>b[1])}
 function ask(h,b){asks.push({h,b});nextAsk()}
 function unlocks(t){const o=[];for(const k in UNITS)if(UNITS[k].tech===t)o.push(UNITS[k].n);for(const k in BLD)if(BLD[k].tech===t)o.push(BLD[k].n);for(const k in WON)if(WON[k].tech===t)o.push(WON[k].n);for(const k in IMP)if(IMP[k].tech===t)o.push(IMP[k].n);if(TNOTE[t])o.push(TNOTE[t]);return o.join(', ')}
-function helpHTML(){return`<p>Click a unit to select it. Click a tile to see the route and how many turns it takes, then click the same tile again (or press Move) to go. Click the selected unit again to deselect it. You can switch the confirm step off under View. Right-click (or double-tap) a tile to send the selected unit there even when one of your own units stands on it. One military unit and one civilian can share a tile. Drag to pan, scroll or pinch to zoom. Click a city's name plate to open it. While a city screen is open the map takes no orders: a click on the map just closes it. Click a resource token for what it does, or any empty tile with nothing selected for its terrain details.</p>
+function helpHTML(){return`<p>Click a unit to select it. Click a tile to see the route and how many turns it takes, then click the same tile again (or press Move) to go. Click the selected unit again to deselect it. You can switch the confirm step off under View. Right-click (or double-tap) a tile to send the selected unit there even when one of your own units stands on it. One military unit and one civilian can share a tile: with one selected, tap the other's tile and confirm to move in. Standing together, either can press Escort so they travel as a pair. Drag to pan, scroll or pinch to zoom. Click a city's name plate to open it. While a city screen is open the map takes no orders: a click on the map just closes it. Click a resource token for what it does, or any empty tile with nothing selected for its terrain details.</p>
   <p>Hover an enemy with a unit selected to see the odds. On a touch screen the first tap shows the odds and the second attacks. The View button toggles map layers: tile yields, resources, improvements, grid, and political or religion maps. Keys: Y yields, G grid, R resources, Enter ends the turn or jumps to the next unit, Space skips, F fortifies, Esc deselects.</p>
-  <p>Enemy moves and attacks now play out one after another at the start of your turn. Tap a notification with an arrow to jump to where it happened. Sound effects can be switched off under View. Formations matter. A melee attack gets +10% for each other friendly soldier standing next to the target, up to +30% (flanking). A unit hit by ranged fire is suppressed: 20% weaker and one move slower through its next turn. Four or more of your soldiers standing in a connected group form an army, marked with a gold star: each fights 20% stronger, cannot be suppressed and mends 5 HP a turn even after fighting. If enemy kills leave a soldier from an army with no friendly soldier within two tiles, it routs: it falls back toward your nearest city at once and cannot attack on its next turn. Units earn XP in combat and a promotion at 10, 30, 60, 100 and 150 XP: select the unit with the gold arrow over it and pick one, or heal 50 HP on the spot. A unit ordered to Drill stays put and gains 2 XP a turn up to 30, enough for its first two promotions; moving or attacking ends the drill. Scouts and ships can Auto explore until the map runs out. Sleeping units wake when an enemy comes within two tiles. After Bronze Working a worker can clear a forest on your land: the trees are gone for good, the city that owns the tile gets a one-time production boost, and the open ground can then be farmed. Workers can add a wall to any land tile you own, on top of its farm or mine. Enemies at war with you cannot enter a walled tile until they knock it down; ballistas, catapults, cannons and artillery do it far faster than troops. Walls mend 6 HP a turn. When you reach a new age, the largest city that owns part of a wall line can build a Wall upgrade for the whole connected line. Keep happiness at zero or better: luxuries, arenas, temples and theatres raise it, every city costs 3 and every two citizens cost 1. Roads and harbors link cities to your capital for gold. Caravans open trade routes. Shrines and temples make faith for a religion.</p>
-  <p>Win by holding every original capital, launching a three-stage starship after Rocketry, or having the top score in ${yearOf(MAXT)}.</p>`}
-let setupO={nation:0,size:1,ai:3,diff:1},hadSave=false,startCancel=false;
+  <p>Enemy moves and attacks now play out one after another at the start of your turn. Tap a notification with an arrow to jump to where it happened. Sound effects can be switched off under View. Nuclear weapons arrive in the Atomic age. Research Nuclear Fission, build the Atomic Program in a city, then build warheads. A warhead needs a launcher: a missile silo built by a worker (14 tiles), a bomber wing based in a city (9 tiles) or a nuclear submarine (8 tiles). Open Nukes to mark targets and launch everything at once. The target tile is wiped out, its neighbors are badly hurt, and fallout poisons the ground for years. Bomber wings also fly ordinary air strikes from the city screen. Formations matter. A melee attack gets +10% for each other friendly soldier standing next to the target, up to +30% (flanking). A unit hit by ranged fire is suppressed: 20% weaker and one move slower through its next turn. Four or more of your soldiers standing in a connected group form an army, marked with a gold star: each fights 20% stronger, cannot be suppressed and mends 5 HP a turn even after fighting. If enemy kills leave a soldier from an army with no friendly soldier within two tiles, it routs: it falls back toward your nearest city at once and cannot attack on its next turn. Units earn XP in combat and a promotion at 10, 30, 60, 100 and 150 XP: select the unit with the gold arrow over it and pick one, or heal 50 HP on the spot. A unit ordered to Drill stays put and gains 2 XP a turn up to 30, enough for its first two promotions; moving or attacking ends the drill. Scouts and ships can Auto explore until the map runs out. Sleeping units wake when an enemy comes within two tiles. After Bronze Working a worker can clear a forest on your land: the trees are gone for good, the city that owns the tile gets a one-time production boost, and the open ground can then be farmed. Workers can add a wall to any land tile you own, on top of its farm or mine. Enemies at war with you cannot enter a walled tile until they knock it down; ballistas, catapults, cannons and artillery do it far faster than troops. Walls mend 6 HP a turn. When you reach a new age, the largest city that owns part of a wall line can build a Wall upgrade for the whole connected line. Keep happiness at zero or better: luxuries, arenas, temples and theatres raise it, every city costs 3 and every two citizens cost 1. Roads and harbors link cities to your capital for gold. Caravans open trade routes. Shrines and temples make faith for a religion.</p>
+  <p>Win by holding every original capital, launching a three-stage starship after Spaceflight, or having the top score in ${yearOf(MAXT)}.</p>`}
+let setupO={nation:0,size:1,ai:3,diff:1,map:'continents',era:0,world:'fresh'},hadSave=false,startCancel=false;
 function showStart(mode,cancel){const el=$('#start');startCancel=!!cancel;let h;
  if(mode==='home')h=`<div class="hero"><div class="kick">A pocket 4X strategy game</div><h1>Meridian Empires</h1><p>Found cities, chart the map, trade, preach, and outlast your rivals across six ages.</p>
-  <div class="sbtn">${hadSave?`<button class="primary big" data-act="resume">Continue<small>Turn ${G.turn} · ${esc(human().name)}</small></button>`:''}<button class="${hadSave?'':'primary '}big" data-act="create">Create game<small>Pick a nation and a world</small></button><button class="big" data-act="howto">How to play</button></div></div>`;
+  <div class="sbtn">${hadSave?`<button class="primary big" data-act="resume">Continue<small>Turn ${G.turn} · ${esc(human().name)}</small></button>`:''}<button class="${hadSave?'':'primary '}big" data-act="create">Create game<small>Pick a nation and a world</small></button><button class="big" data-act="howto">How to play</button></div>${[1,2,3].some(slotMeta)?'<div class="panel" style="margin-top:14px;text-align:left"><h4 style="margin-top:0">Saved games</h4>'+slotsHTML(false)+'</div>':''}</div>`;
  else if(mode==='help')h=`<div class="panel"><h2>How to play</h2>${helpHTML()}<div class="foot"><button class="primary" data-act="home">Back</button></div></div>`;
  else{const o=setupO,sl=(k,opts)=>`<select id="s_${k}" data-s="${k}">${opts.map(([v,n])=>`<option value="${v}" ${o[k]===v?'selected':''}>${n}</option>`).join('')}</select>`;
   h=`<div class="panel"><h2>Create game</h2>${cancel?'<p>Starting replaces the game in progress.</p>':'<p>Every nation plays by the same rules but brings its own edge.</p>'}<h4>Your nation</h4>
   <div class="nats">${NATIONS.map((n,i)=>`<button class="nat${o.nation===i?' on':''}" data-act="pickNat" data-arg="${i}" style="--nc:${n.col}"><b>${n.n}</b><em>${n.tn}</em>${n.td.map(d=>`<small>${d}</small>`).join('')}</button>`).join('')}</div>
   <div class="srow"><div><label class="f" for="s_size">Map</label>${sl('size',[[0,'Small'],[1,'Standard'],[2,'Large']])}</div><div><label class="f" for="s_ai">Rival nations</label>${sl('ai',[[2,'2'],[3,'3'],[4,'4'],[5,'5']])}</div>
-  <div><label class="f" for="s_diff">Difficulty</label>${sl('diff',[[0,'Settler (easier)'],[1,'Captain (even)'],[2,'Warlord (harder)']])}</div></div>
+  <div><label class="f" for="s_diff">Difficulty</label>${sl('diff',[[0,'Settler (easier)'],[1,'Captain (even)'],[2,'Warlord (harder)']])}</div>
+  <div><label class="f" for="s_map">Map type</label>${sl('map',[['continents','Continents'],['pangaea','Pangaea: one big landmass'],['islands','Islands: everyone starts with boats'],['inland','Inland sea']])}</div>
+  <div><label class="f" for="s_world">World</label>${sl('world',[['fresh','Fresh start'],['modern','Prebuilt modern world']])}</div>
+  ${o.world==='modern'?'':`<div><label class="f" for="s_era">Starting age</label>${sl('era',ERAS.map((e,k)=>[k,e]))}</div>`}</div>
+  ${o.world==='modern'?'<p>Every nation begins in the modern age with a capital, several built-up cities, roads, improved land and a standing army.</p>':''}
   <div class="foot"><button data-act="${cancel?'resume':'home'}">${cancel?'Cancel':'Back'}</button><button class="primary" data-act="start">Start as the ${NATIONS[o.nation].n}</button></div></div>`}
  el.innerHTML=h;el.hidden=false;el.scrollTop=0}
+let devOpen=false;
+function slotMeta(n){try{return JSON.parse(localStorage.getItem('meridian-slot-'+n+'-meta'))}catch(e){return null}}
+function slotsHTML(canSave){return[1,2,3].map(n=>{const m=slotMeta(n);return`<div class="row" style="margin-top:6px;flex-wrap:wrap"><span>Slot ${n}: ${m?esc(m.name)+', turn '+m.turn+' ('+esc(m.when)+')':'empty'}</span><span class="acts">${canSave?`<button data-act="saveSlot" data-arg="${n}">Save here</button>`:''}<button data-act="loadSlot" data-arg="${n}" ${m?'':'disabled'}>Load</button></span></div>`}).join('')}
+function devHTML(){const B=(a,l)=>`<button data-act="dev" data-arg="${a}">${l}</button>`;return`<details ${devOpen?'open':''}><summary>Dev tools (temporary)</summary><div class="acts" style="margin-top:8px">${B('reveal',G.devSee?'Hide map again':'Reveal whole map')}${B('gold','+1000 gold')}${B('culture','+500 culture')}${B('faith','+200 faith')}${B('tech','Finish current research')}${B('era','Learn a whole age')}${B('build','Finish all production')}${B('nukes','Nuclear kit: program, 5 warheads, silo, bombers')}${B('heal','Heal and refresh my units')}${B('xp','+30 XP to selected unit')}${B('peace','Peace with everyone')}${B('auto10','Auto-play 10 turns')}${B('auto50','Auto-play 50 turns')}${B('win','Win now')}</div>
+ <div class="acts" style="margin-top:8px"><select id="devUnit" style="width:auto">${Object.keys(UNITS).map(k=>`<option value="${k}">${UNITS[k].n}</option>`).join('')}</select>${B('unit','Spawn at selected unit or capital')}</div></details>`}
 function showOver(){const o=G.over,pl=o.who>=0?G.players[o.who]:null,me=o.who===0;
  const t=o.type==='defeat'?'Your civilization has fallen':me?'Victory':'Defeat';
  const why={domination:' holds every original capital.',science:' launched the first starship.',score:' leads the world as the age closes in '+yearOf(MAXT)+'.'}[o.type];
@@ -1114,6 +1266,8 @@ const ACT={
  menu(){modal(`<div class="row"><h2>Meridian Empires</h2><button data-act="close">✕</button></div>
   <p>Turn ${G.turn} of ${MAXT}. The game saves itself to this browser at the start of every turn.</p>
   ${helpHTML()}
+  <h4>Saved games</h4><p>The game autosaves every turn. Slots keep a copy you can return to.</p>${slotsHTML(true)}
+  <h4>Tools</h4>${devHTML()}
   <h4>Chronicle</h4><div style="color:var(--dim);max-height:160px;overflow-y:auto">${G.log.slice().reverse().map(esc).join('<br>')||'Nothing yet.'}</div>
   <div class="foot"><button data-act="home">Title screen</button><button data-act="setup">New game</button><button class="primary" data-act="close">Back to the map</button></div>`)},
  setup(){$('#modal').hidden=true;askFns=[];asks=[];showStart('create',true)},
@@ -1131,6 +1285,7 @@ const ACT={
  improve(){const u=selUnit();if(u&&workerAct(u))selectNext(true);ui()},
  road(){const u=selUnit();if(u&&workerRoad(u))selectNext(true);ui()},
  wall(){const u=selUnit();if(u&&workerWall(u))selectNext(true);ui()},
+ silo(){const u=selUnit();if(u&&workerSilo(u))selectNext(true);ui()},
  clear(){const u=selUnit();if(u&&workerClear(u))selectNext(true);ui()},
  trade(){const u=selUnit(),c=u&&canTrade(u);if(c){establish(u,c);selectNext(true)}ui()},
  spread(){const u=selUnit(),c=u&&canSpread(u);if(c){spreadFaith(u,c);selectNext(true)}ui()},
@@ -1142,16 +1297,51 @@ const ACT={
  view(){const v=$('#view');v.hidden=!v.hidden},
  explore(){const u=selUnit();if(!u)return;u.explore=!u.explore;if(u.explore){u.goto=null;u.fort=u.sleep=u.drill=false;autoExplore(u);selectNext(true)}ui()},
  drill(){const u=selUnit();if(!u)return;u.drill=!u.drill;if(u.drill){u.goto=null;u.explore=false;selectNext(true)}ui()},
+ modeOff(){mode=null;ui()},airMode(){const c=CM.get(cityOpen);if(c&&airReady(c)>0){mode={k:'air',city:c.id};cityOpen=null;sel=null}ui()},
+ nukes(){const h=human(),ps=platforms(0),rd=ps.filter(p=>p.ready),cap=Math.min(h.nukes,rd.length);for(const i of[...nukeT])if(!inNukeRange(0,i))nukeT.delete(i);
+  const cs=G.cities.filter(c=>c.own!==0&&h.seen[idx(c.c,c.r)]&&inNukeRange(0,idx(c.c,c.r))).sort((a,b)=>(!!h.war[b.own])-(!!h.war[a.own])||b.pop-a.pop);
+  modal(`<div class="row"><h2>Nuclear command</h2><button data-act="close">✕</button></div><p>Warheads in stockpile: <b>${h.nukes}</b>. Launchers ready this turn: <b>${rd.length}</b> of ${ps.length}. Every missile you order leaves at the same moment. A strike on a nation you are at peace with is a declaration of war, and the rest of the world will remember it.</p>
+  <h4>Launchers</h4>${ps.length?`<div class="tw"><table><tr><th>Launcher</th><th>Reach</th><th>Status</th></tr>${ps.map(p=>`<tr><td>${esc(p.n)}</td><td>${p.rng} tiles</td><td>${p.ready?'Ready':'Fired this turn'}</td></tr>`).join('')}</table></div>`:'<p>None. Build a missile silo with a worker (Rocketry), a bomber wing in a city (Flight) or a nuclear submarine (Nuclear Propulsion).</p>'}
+  <h4>Targets in reach (${nukeT.size} of ${cap} marked)</h4>${cs.length?cs.map(c=>{const ci=idx(c.c,c.r);return`<label class="tgt" for="nt_${ci}"><input type="checkbox" id="nt_${ci}" data-nt="${ci}" ${nukeT.has(ci)?'checked':''} ${!nukeT.has(ci)&&nukeT.size>=cap?'disabled':''}><span><b>${esc(c.name)}</b> · ${esc(G.players[c.own].name)} · population ${c.pop}${h.war[c.own]?'':' · at peace'}</span></label>`}).join(''):'<p>No known enemy city is in reach of a ready launcher.</p>'}
+  ${[...nukeT].filter(i=>!G.tiles[i].city).length?`<p>${[...nukeT].filter(i=>!G.tiles[i].city).length} open-ground target(s) marked on the map.</p>`:''}
+  <div class="foot"><button data-act="nukeMap" ${cap?'':'disabled'}>Mark targets on the map</button><button class="warn" data-act="launch" ${nukeT.size?'':'disabled'}>Launch ${nukeT.size||''} now</button></div>`)},
+ nukeMap(){mode={k:'nuke'};sel=null;cityOpen=null;$('#modal').hidden=true;askFns=[];ui()},
+ launchAsk(){if(nukeT.size)ask(`<h2>Launch ${nukeT.size} nuclear ${nukeT.size>1?'missiles':'missile'}?</h2><p>This cannot be called back.</p>`,[['Hold',()=>{}],['Launch',()=>ACT.launch(),'warn']])},
+ launch(){const n=launchNukes(0,[...nukeT]);nukeT.clear();mode=null;$('#modal').hidden=true;askFns=[];if(!n)note('No missile could be launched.');ui()},
+ selOther(){if(pend&&pend.o){sel=pend.o;pend=null}ui()},
+ escort(){const u=selUnit();if(!u)return;const p2=partner(u),o=(UNITS[u.type].str?cAt:uAt).get(idx(u.c,u.r));if(p2){u.esc=p2.esc=null}else if(o&&o.own===0){u.esc=o.id;o.esc=u.id;note('The '+UNITS[u.type].n+' and '+UNITS[o.type].n+' now travel together. Move either one.','good')}ui()},
+ saveSlot(n){try{localStorage.setItem('meridian-slot-'+n,ser());localStorage.setItem('meridian-slot-'+n+'-meta',JSON.stringify({name:human().name,turn:G.turn,when:new Date().toLocaleDateString()}));note('Saved to slot '+n+'.','good')}catch(e){note('Could not save: browser storage is full or blocked.','bad')}ACT.menu()},
+ loadSlot(n){let ok=false;try{ok=load(JSON.parse(localStorage.getItem('meridian-slot-'+n)))}catch(e){}if(ok){hadSave=true;$('#start').hidden=true;$('#modal').hidden=true;asks=[];askFns=[];sel=null;cityOpen=null;mode=null;nukeT.clear();save();ui();note('Loaded slot '+n+'.','good')}else note('That save could not be loaded.','bad')},
+ dev(a){const h=human(),c=capOf(0),u=selUnit();devOpen=true;switch(a){
+  case'reveal':G.devSee=!G.devSee;for(const p of G.players)if(!p.barb&&p.id){h.met[p.id]=1;p.met[0]=1}break;
+  case'gold':h.gold+=1000;break;case'culture':h.culture+=500;break;case'faith':h.faith+=200;break;
+  case'tech':if(h.research){learn(h,h.research);h.research=null}break;
+  case'era':{const e0=eraOf(h),e=Object.keys(TECH).every(k=>TECH[k].era>e0||h.techs[k])?e0+1:e0;for(const k in TECH)if(TECH[k].era<=e)h.techs[k]=1;h.research=null;break}
+  case'build':for(const ct of citiesOf(0))if(ct.build){ct.prod=itemCost(h,ct.build);complete(ct)}break;
+  case'unit':{const ty=$('#devUnit').value,at=u?idx(u.c,u.r):c?idx(c.c,c.r):-1;if(at>=0){if(UNITS[ty].naval){const w=within(...cr(at),2).find(j=>isWater(j)&&!uAt.has(j));if(w!=null){const[x,y]=cr(w);spawn(0,ty,x,y)}else note('No open water within two tiles.')}else spawnNear(0,ty,at)}break}
+  case'nukes':h.techs.fission=h.techs.rocketry=h.techs.flight=1;h.prog=1;G.nukeAge=1;h.nukes+=5;if(c){c.air=(c.air||0)+2;const st=c.tiles.find(i=>!isWater(i)&&!G.tiles[i].city&&!G.tiles[i].silo&&G.tiles[i].t!=='mountain');if(st!=null)G.tiles[st].silo=1}break;
+  case'heal':for(const z of unitsOf(0)){z.hp=100;z.mv=mvOf(z)}break;case'xp':if(u)u.xp+=30;break;
+  case'peace':for(const p of G.players)if(!p.barb&&p.id&&h.war[p.id])makePeace(0,p.id);break;
+  case'auto10':case'auto50':$('#modal').hidden=true;askFns=[];DBG.auto(a==='auto10'?10:50);return;
+  case'win':win(h,'domination');showOver();return}
+  updateVis();ACT.menu();ui()},
  go(){const u=selUnit();if(u&&pend&&pend.u===u.id){const i=pend.i;pend=null;order(u,i)}ui()},cancelMove(){pend=null;ui()},
  promo(k){const u=selUnit();if(u&&u.own===0&&pendingPromo(u)>0&&(k==='heal'||promoOpts(u).includes(k))){takePromo(u,k);sfx('promo');note(UNITS[u.type].n+(k==='heal'?' patched up.':' learned '+PROMO[k].n+'.'),'good')}ui()},closeInfo(){info=null;ui()},
  desel(){sel=null;pv=null;ui()}};
 const VOPT=[['res','Resources (R)'],['imp','Improvements'],['feat','Terrain art'],['grid','Hex grid (G)'],['tint','Territory tint'],['pol','Political map'],['rel','Religion map'],['routes','Trade routes'],['confirm','Confirm moves (tap twice)'],['sound','Sound effects']];
 function viewUI(){$('#view').innerHTML='<div class="row"><b>Map view</b><button data-act="view" aria-label="Close">✕</button></div>'+`<label for="v_yields">Tile yields (Y) <select id="v_yields" data-v="yields">${['Off','My land','Whole map'].map((n,k)=>`<option value="${k}" ${(+V.yields||0)===k?'selected':''}>${n}</option>`).join('')}</select></label>`+VOPT.map(([k,n])=>`<label for="v_${k}"><input type="checkbox" id="v_${k}" data-v="${k}" ${V[k]?'checked':''}> ${n}</label>`).join('')+'<small>Left to right: food in green, production in orange, gold in yellow. Zeros are left blank. A selected settler always shows the yields around it.</small>'}
 function setV(k,val){V[k]=val==null?!V[k]:val;try{localStorage.setItem('meridian-view',JSON.stringify(V))}catch(e){}viewUI();dirty=true}
-document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.v;if(k)setV(k,e.target.tagName==='SELECT'?+e.target.value:e.target.checked);const k2=e.target.dataset&&e.target.dataset.s;if(k2)setupO[k2]=+e.target.value});
+document.addEventListener('change',e=>{const nt=e.target.dataset&&e.target.dataset.nt;if(nt){e.target.checked?nukeT.add(+nt):nukeT.delete(+nt);ACT.nukes();return}const k=e.target.dataset&&e.target.dataset.v;if(k)setV(k,e.target.tagName==='SELECT'?+e.target.value:e.target.checked);const k2=e.target.dataset&&e.target.dataset.s;if(k2){setupO[k2]=isNaN(+e.target.value)?e.target.value:+e.target.value;if(k2==='world')showStart('create',startCancel)}});
 document.addEventListener('click',e=>{const tl=e.target.closest('.toast.go');if(tl&&G){const[c,r]=cr(+tl.dataset.loc);center(c,r);miniDirty=true;tl.remove();return}const b=e.target.closest('[data-act]');if(b&&!b.disabled&&G)ACT[b.dataset.act](b.dataset.arg);else if(e.target.id==='modal'&&!askFns.length)closeModal()});
 function order(u,i){if(!findPath(u,i)){note('No route there. Closed borders, water or mountains block the way.')}else{u.goto=i;u.auto=false;u.explore=false;follow(u);if(u.mv<=0||u.goto!=null)selectNext(false)}}
+function modeBar(){const el=$('#modebar');if(!mode){el.hidden=true;return}const h=human();
+ if(mode.k==='air'){const c=CM.get(mode.city);el.innerHTML=`<span>Air strike from ${esc(c.name)}: tap an enemy within 6 tiles. ${airReady(c)} left this turn.</span><button data-act="modeOff">Done</button>`}
+ else{const cap=Math.min(h.nukes,platforms(0).filter(p=>p.ready).length);el.innerHTML=`<span><b>${nukeT.size}</b> of ${cap} targets marked. Tap tiles inside the red rings.</span><button class="warn" data-act="launchAsk" ${nukeT.size?'':'disabled'}>Launch</button><button data-act="nukes">Command</button><button data-act="modeOff">Cancel</button>`}
+ el.hidden=false}
+function modeTap(i){if(i<0)return;if(mode.k==='air'){const c=CM.get(mode.city);if(!airStrike(c,i))note('Pick an enemy unit, city or wall within 6 tiles of '+c.name+'.');else if(airReady(c)<=0)mode=null}
+ else{const cap=Math.min(human().nukes,platforms(0).filter(p=>p.ready).length);if(nukeT.has(i))nukeT.delete(i);else if(!inNukeRange(0,i))note('No ready launcher can reach that tile.');else if(nukeT.size>=cap)note('Every available warhead already has a target.');else nukeT.add(i)}ui()}
 function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>wx>=l.x&&wx<=l.x+l.w&&wy>=l.y&&wy<=l.y+l.h),now=performance.now(),pp=pend;info=null;pend=null;
+ if(mode){modeTap(i);return}
  if(cityOpen){const c=lb&&CM.get(lb.id);if(c&&c.own===0&&c.id!==cityOpen){sel=null;pv=null;openCity(c.id)}else{cityOpen=null;ui()}return}
  if(!lb&&!force&&i>=0&&human().seen[i]&&G.tiles[i].res&&V.res){const[c,r]=cr(i);if((wx-hx(c,r)+15)**2+(wy-hy(r)-13)**2<150){info=i;ui();return}}
  if(lb&&!force){const c=CM.get(lb.id);if(c.own===0){sel=null;pv=null;openCity(c.id)}else note(c.name+' · '+G.players[c.own].name+' · population '+c.pop+(c.rel!=null?' · '+G.rels[c.rel].name:''));ui();return}
@@ -1163,10 +1353,11 @@ function tap(px,py,touch,force){const{i,wx,wy}=pickHex(px,py),lb=labels.find(l=>
  if(mine&&e&&canAttack(u,i)){if(!atWar(0,e.own))ask(`<h2>Declare war on the ${esc(G.players[e.own].name)}?</h2><p>Attacking breaks the peace and ends your deals with them.</p>`,[['Stand down',()=>{}],['Declare war',()=>declareWar(0,e.own),'warn']]);
   else if(touch&&!(pv&&pv.i===i)){pv=preview(u,i);note('Tap again to attack.')}else{pv=null;attack(u,i);if(!selUnit()||selUnit().mv<=0)selectNext(false)}ui();return}
  pv=null;
- if(own.length&&vis[i]&&!force){const k=own.findIndex(o=>u&&o.id===u.id);if(k>=0&&k===own.length-1&&city&&city.own===0){sel=null;openCity(city.id)}else if(k>=0&&k===own.length-1){sel=null}else{const n=own[(k+1)%own.length];sel=n.id;sfx('sel');n.sleep=false;n.fort=false;cityOpen=null}ui();return}
+ const stackMove=mine&&own.length&&!mapOf(u).has(i)&&!own.some(o=>o.id===u.id)&&idx(u.c,u.r)!==i&&(V.confirm||touch===false);
+ if(own.length&&vis[i]&&!force&&!stackMove){const k=own.findIndex(o=>u&&o.id===u.id);if(k>=0&&k===own.length-1&&city&&city.own===0){sel=null;openCity(city.id)}else if(k>=0&&k===own.length-1){sel=null}else{const n=own[(k+1)%own.length];sel=n.id;sfx('sel');n.sleep=false;n.fort=false;cityOpen=null}ui();return}
  if(!mine&&city&&city.own===0){openCity(city.id);return}
  if(mine){if(idx(u.c,u.r)!==i){if(force||!V.confirm||(pp&&pp.i===i&&pp.u===u.id))order(u,i);
-   else{const path=findPath(u,i);if(!path)note('No route there. Closed borders, water or mountains block the way.');else{let cst=0,pi=idx(u.c,u.r);for(const j of path){cst+=isWater(j)!==isWater(pi)?mvOf(u):stepCost(j,pi);pi=j}pend={i,u:u.id,p:path,t:Math.max(1,Math.ceil(cst/mvOf(u)))}}}}ui();return}
+   else{const path=findPath(u,i);if(!path)note('No route there. Closed borders, water or mountains block the way.');else{let cst=0,pi=idx(u.c,u.r);for(const j of path){cst+=isWater(j)!==isWater(pi)?mvOf(u):stepCost(j,pi);pi=j}pend={i,u:u.id,p:path,t:Math.max(1,Math.ceil(cst/mvOf(u))),o:own.length?own[0].id:null}}}}ui();return}
  const here=uAt.get(i)||cAt.get(i);if(here&&vis[i]){sel=here.id}else{sel=null;cityOpen=null;info=i}ui()}
 /* pointer + keys */
 {const P=new Map();let moved=0,pd=0,hov=-1;
